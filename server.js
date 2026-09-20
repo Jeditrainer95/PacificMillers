@@ -196,7 +196,7 @@ function readBody(req) {
     let body = "";
     req.on("data", chunk => {
       body += chunk;
-      if (body.length > 1_000_000) {
+      if (body.length > 8_000_000) {
         reject(new Error("Payload demasiado grande"));
         req.destroy();
       }
@@ -213,10 +213,56 @@ function readBody(req) {
   });
 }
 
+function excerpt(text, max = 170) {
+  const clean = String(text || "").replace(/[#*_`>\[\]()~-]/g, "").replace(/\s+/g, " ").trim();
+  return clean.length > max ? `${clean.slice(0, max - 1).trim()}...` : clean;
+}
+
+function normalizeAnnouncement(item = {}) {
+  const text = String(item.text || "");
+  const content = String(item.content || text || "");
+  const images = Array.isArray(item.images) ? item.images.filter(image => image && image.src).slice(0, 8) : [];
+  const coverImage = item.coverImage || images.find(image => image.isCover)?.src || "";
+  return {
+    ...item,
+    title: String(item.title || "Anuncio").slice(0, 120),
+    summary: String(item.summary || text || excerpt(content)).slice(0, 260),
+    text,
+    content,
+    category: String(item.category || "Comunicado").slice(0, 60),
+    author: String(item.author || "Pacific Bluffs").slice(0, 80),
+    status: String(item.status || (item.visible === false ? "borrador" : "publicado")).slice(0, 30),
+    visible: item.visible !== false && item.status !== "borrador",
+    featured: String(item.featured || "").slice(0, 260),
+    coverImage,
+    images,
+    createdAt: item.createdAt || now(),
+    updatedAt: item.updatedAt || item.createdAt || now()
+  };
+}
+
+function validateAnnouncementImages(images) {
+  if (!Array.isArray(images)) return [];
+  return images.slice(0, 8).map(image => {
+    const src = String(image?.src || "");
+    if (!src) return null;
+    if (!/^data:image\/(png|jpe?g|webp);base64,/i.test(src) && !/^https?:\/\//i.test(src) && !src.startsWith("/")) {
+      throw new Error("Formato de imagen no valido");
+    }
+    if (src.length > 1_800_000) throw new Error("Una imagen supera el tamano permitido");
+    return {
+      id: String(image.id || crypto.randomUUID()),
+      name: String(image.name || "Imagen").slice(0, 100),
+      src,
+      isCover: Boolean(image.isCover)
+    };
+  }).filter(Boolean);
+}
+
 function sanitizePublic(db) {
   return {
     business: db.business,
-    announcements: db.announcements.filter(item => item.visible),
+    announcements: db.announcements.map(normalizeAnnouncement).filter(item => item.visible),
     menuItems: db.menuItems.filter(item => item.available)
   };
 }
@@ -283,6 +329,13 @@ async function handleApi(req, res, url) {
 
   if (req.method === "GET" && url.pathname === "/api/public") {
     return sendJson(res, 200, sanitizePublic(db));
+  }
+
+  if (req.method === "GET" && url.pathname.startsWith("/api/announcements/")) {
+    const id = decodeURIComponent(url.pathname.split("/").pop());
+    const announcement = db.announcements.map(normalizeAnnouncement).find(item => item.id === id && item.visible);
+    if (!announcement) return sendJson(res, 404, { error: "Anuncio no encontrado" });
+    return sendJson(res, 200, announcement);
   }
 
   if (req.method === "GET" && url.pathname === "/api/health") {
@@ -365,12 +418,27 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "POST" && url.pathname === "/api/announcements") {
+    const images = validateAnnouncementImages(body.images);
+    if (!String(body.title || "").trim() || !String(body.content || body.text || "").trim()) {
+      return sendJson(res, 400, { error: "Faltan titulo y contenido del anuncio" });
+    }
+    const coverCandidate = String(body.coverImage || "");
+    const coverImage = coverCandidate || images.find(image => image.isCover)?.src || "";
     const item = upsertById(managedDb.announcements, {
       id: body.id,
-      title: String(body.title || "").slice(0, 100),
-      text: String(body.text || "").slice(0, 1000),
-      visible: Boolean(body.visible),
-      createdAt: body.createdAt || now()
+      title: String(body.title || "").slice(0, 120),
+      summary: String(body.summary || "").slice(0, 260),
+      text: String(body.summary || body.text || "").slice(0, 1000),
+      content: String(body.content || body.text || "").slice(0, 12000),
+      category: String(body.category || "Comunicado").slice(0, 60),
+      author: String(body.author || auth.user.name || "Pacific Bluffs").slice(0, 80),
+      status: String(body.status || "publicado").slice(0, 30),
+      visible: Boolean(body.visible) && String(body.status || "publicado") !== "borrador",
+      featured: String(body.featured || "").slice(0, 260),
+      coverImage,
+      images,
+      createdAt: body.createdAt || now(),
+      updatedAt: now()
     });
     writeDb(managedDb);
     return sendJson(res, 200, item);
@@ -568,7 +636,7 @@ function serveStatic(req, res, url) {
     "/panel": "/panel.html",
     "/panel/": "/panel.html"
   };
-  const requested = pageRoutes[url.pathname] || decodeURIComponent(url.pathname);
+  const requested = pageRoutes[url.pathname] || (url.pathname.startsWith("/anuncios/") ? "/anuncios.html" : decodeURIComponent(url.pathname));
   const filePath = path.normalize(path.join(PUBLIC_DIR, requested));
   if (!filePath.startsWith(PUBLIC_DIR)) return sendText(res, 403, "Acceso denegado");
   fs.readFile(filePath, (error, data) => {
