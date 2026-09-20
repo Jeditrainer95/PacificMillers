@@ -1,9 +1,10 @@
-PACIFIC BLUFFS - DESPLIEGUE
+PACIFIC BLUFFS — HTML + PHP
 
-1. Sube toda esta carpeta al servidor.
-2. Asegurate de que Node.js >= 18 este habilitado.
-3. Inicia server.js (o ejecuta: npm start).
-4. Usa el puerto asignado por el hosting mediante la variable PORT.
-5. Si Apache esta delante de Node, deja el .htaccess incluido.
+1. Sube TODOS los archivos de esta carpeta a public_html (o equivalente).
+2. Usa un hosting con PHP 7.4+ y Apache/mod_rewrite.
+3. Da permisos de escritura a la carpeta data/.
+4. No necesitas Node.js, npm ni server.js.
+5. Entra en /panel para gestionar usuarios y anuncios.
 
-IMPORTANTE: un hosting que solo permite HTML/PHP y no permite ejecutar Node.js NO puede ejecutar este backend tal como esta. En ese caso hay que adaptar el backend a la tecnologia que soporte el hosting.
+Usuario inicial: jefe
+Contraseña inicial: Pacific2026!

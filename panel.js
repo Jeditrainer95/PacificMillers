@@ -147,7 +147,7 @@ async function api(path, options = {}) {
     try {
       data = parseJsonResponse(text);
     } catch (error) {
-      lastError = new Error(`La API respondio con datos no validos en ${base || "esta web"}. Revisa que /api apunte al servidor Node y no a una pagina HTML.`);
+      lastError = new Error(`La API respondio con datos no validos en ${base || "esta web"}. Revisa que PHP y .htaccess esten activos y que /api apunte a api.php.`);
       continue;
     }
 

@@ -22,7 +22,7 @@ async function api(path, options = {}) {
     data = text ? JSON.parse(text) : {};
   } catch (error) {
     throw new Error(path.startsWith("/api/")
-      ? "La API no esta devolviendo JSON valido. Revisa que el host sirva el backend Node y no una pagina HTML en /api."
+      ? "La API no esta devolviendo JSON valido. Revisa que PHP y .htaccess esten activos y que /api apunte a api.php."
       : "No se pudo leer el archivo de datos publicos.");
   }
   if (!response.ok) throw new Error(data.error || "Error de conexion");
