@@ -7,7 +7,8 @@ const state = {
 const $ = selector => document.querySelector(selector);
 const $$ = selector => Array.from(document.querySelectorAll(selector));
 const APP_BASE = new URL(".", document.currentScript?.src || location.href).pathname;
-const API_BASE = (window.PB_API_BASE || localStorage.getItem("pb_api_base") || (location.protocol === "file:" ? "" : APP_BASE.replace(/\/$/, ""))).replace(/\/$/, "");
+const CONFIGURED_API_BASE = (window.PB_API_BASE || localStorage.getItem("pb_api_base") || "").replace(/\/$/, "");
+const DEFAULT_API_BASE = location.protocol === "file:" ? "" : APP_BASE.replace(/\/$/, "");
 let pendingOrderDeleteId = null;
 let pendingUserDeleteId = null;
 let editingUserId = null;
@@ -113,21 +114,66 @@ function closeUserDeleteModal() {
 async function api(path, options = {}) {
   const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
   if (state.token) headers.Authorization = `Bearer ${state.token}`;
-  let response;
-  try {
-    response = await fetch(`${API_BASE}${path}`, { ...options, headers });
-  } catch (error) {
-    throw new Error(`No se puede conectar con la API en ${API_BASE || "esta web"}. Comprueba que el servidor del host tenga activas las rutas /api.`);
+  const apiBases = CONFIGURED_API_BASE
+    ? [CONFIGURED_API_BASE]
+    : Array.from(new Set([DEFAULT_API_BASE, ""]));
+  let lastError = null;
+
+  for (const base of apiBases) {
+    let response;
+    try {
+      response = await fetch(`${base}${path}`, { ...options, headers });
+    } catch (error) {
+      lastError = new Error(`No se puede conectar con la API en ${base || "esta web"}.`);
+      continue;
+    }
+
+    const text = await response.text();
+    let data = {};
+    try {
+      data = parseJsonResponse(text);
+    } catch (error) {
+      lastError = new Error(`La API respondio con datos no validos en ${base || "esta web"}. Revisa que /api apunte al servidor Node y no a una pagina HTML.`);
+      continue;
+    }
+
+    if (!response.ok) throw new Error(data.error || "Error de conexion");
+    return data;
   }
-  const text = await response.text();
-  let data = {};
+
+  throw lastError || new Error("No se pudo conectar con la API.");
+}
+
+function parseJsonResponse(text) {
+  const clean = String(text || "").trim();
+  if (!clean) return {};
   try {
-    data = text ? JSON.parse(text) : {};
+    return JSON.parse(clean);
   } catch (error) {
-    throw new Error(`La API no devolvio JSON valido en ${API_BASE || "esta web"}. Comprueba que el host envie las rutas /api al servidor Node.`);
+    const start = clean.search(/[\[{]/);
+    if (start < 0) throw error;
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+    for (let index = start; index < clean.length; index += 1) {
+      const char = clean[index];
+      if (inString) {
+        if (escaped) {
+          escaped = false;
+        } else if (char === "\\") {
+          escaped = true;
+        } else if (char === "\"") {
+          inString = false;
+        }
+        continue;
+      }
+      if (char === "\"") inString = true;
+      if (char === "{" || char === "[") depth += 1;
+      if (char === "}" || char === "]") depth -= 1;
+      if (depth === 0) return JSON.parse(clean.slice(start, index + 1));
+    }
+    throw error;
   }
-  if (!response.ok) throw new Error(data.error || "Error de conexion");
-  return data;
 }
 
 function escapeHtml(value) {
