@@ -5,7 +5,8 @@ const publicState = {
 };
 
 const $ = selector => document.querySelector(selector);
-const API_BASE = (window.PB_API_BASE || localStorage.getItem("pb_api_base") || "").replace(/\/$/, "");
+const APP_BASE = new URL(".", document.currentScript?.src || location.href).pathname;
+const API_BASE = (window.PB_API_BASE || localStorage.getItem("pb_api_base") || (location.protocol === "file:" ? "" : APP_BASE.replace(/\/$/, ""))).replace(/\/$/, "");
 
 function money(value) {
   return `$${Number(value || 0).toLocaleString("es-ES", { maximumFractionDigits: 0 })}`;
@@ -15,7 +16,15 @@ async function api(path, options = {}) {
   const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
   const url = path.startsWith("/api/") ? `${API_BASE}${path}` : path;
   const response = await fetch(url, { ...options, headers });
-  const data = await response.json().catch(() => ({}));
+  const text = await response.text();
+  let data = {};
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch (error) {
+    throw new Error(path.startsWith("/api/")
+      ? "La API no esta devolviendo JSON valido. Revisa que el host sirva el backend Node y no una pagina HTML en /api."
+      : "No se pudo leer el archivo de datos publicos.");
+  }
   if (!response.ok) throw new Error(data.error || "Error de conexion");
   return data;
 }
@@ -24,7 +33,7 @@ async function loadPublicData() {
   try {
     return await api("/api/public");
   } catch (error) {
-    return api("public-data.json");
+    return api(`${APP_BASE}public-data.json`);
   }
 }
 
@@ -66,7 +75,7 @@ function formatDateShort(value) {
 }
 
 function announcementUrl(id) {
-  return location.protocol === "file:" ? `anuncios.html?id=${encodeURIComponent(id)}` : `/anuncios/${encodeURIComponent(id)}`;
+  return location.protocol === "file:" ? `anuncios.html?id=${encodeURIComponent(id)}` : `${APP_BASE}anuncios/${encodeURIComponent(id)}`;
 }
 
 function currentAnnouncementId() {
@@ -240,7 +249,7 @@ async function renderAnnouncementDetail(id) {
     document.title = `${item.title} | Pacific Bluffs`;
     container.innerHTML = `
       <article class="announcement-detail-shell">
-        <a class="back-link" href="${location.protocol === "file:" ? "anuncios.html" : "/anuncios"}">← Volver a anuncios</a>
+        <a class="back-link" href="${location.protocol === "file:" ? "anuncios.html" : `${APP_BASE}anuncios`}">← Volver a anuncios</a>
         <header class="announcement-detail-header">
           <div>
             <p class="eyebrow">${escapeHtml(item.category || "Comunicado")}</p>
@@ -260,11 +269,11 @@ async function renderAnnouncementDetail(id) {
             ${item.images.filter(image => image.src !== item.coverImage).map(image => `<img src="${escapeAttr(image.src)}" alt="${escapeAttr(image.name || item.title)}">`).join("")}
           </section>
         ` : ""}
-        <a class="button ghost back-button" href="${location.protocol === "file:" ? "anuncios.html" : "/anuncios"}">← Volver a anuncios</a>
+        <a class="button ghost back-button" href="${location.protocol === "file:" ? "anuncios.html" : `${APP_BASE}anuncios`}">← Volver a anuncios</a>
       </article>
     `;
   } catch (error) {
-    container.innerHTML = `<div class="empty-state panel"><h3>Anuncio no encontrado</h3><p>No hemos encontrado este comunicado o ya no esta publicado.</p><a class="button ghost" href="/anuncios">Volver a anuncios</a></div>`;
+    container.innerHTML = `<div class="empty-state panel"><h3>Anuncio no encontrado</h3><p>No hemos encontrado este comunicado o ya no esta publicado.</p><a class="button ghost" href="${location.protocol === "file:" ? "anuncios.html" : `${APP_BASE}anuncios`}">Volver a anuncios</a></div>`;
   }
 }
 

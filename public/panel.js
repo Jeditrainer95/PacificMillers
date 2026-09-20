@@ -6,7 +6,8 @@ const state = {
 
 const $ = selector => document.querySelector(selector);
 const $$ = selector => Array.from(document.querySelectorAll(selector));
-const API_BASE = (window.PB_API_BASE || localStorage.getItem("pb_api_base") || "").replace(/\/$/, "");
+const APP_BASE = new URL(".", document.currentScript?.src || location.href).pathname;
+const API_BASE = (window.PB_API_BASE || localStorage.getItem("pb_api_base") || (location.protocol === "file:" ? "" : APP_BASE.replace(/\/$/, ""))).replace(/\/$/, "");
 let pendingOrderDeleteId = null;
 let pendingUserDeleteId = null;
 let editingUserId = null;
@@ -118,7 +119,13 @@ async function api(path, options = {}) {
   } catch (error) {
     throw new Error(`No se puede conectar con la API en ${API_BASE || "esta web"}. Comprueba que el servidor del host tenga activas las rutas /api.`);
   }
-  const data = await response.json().catch(() => ({}));
+  const text = await response.text();
+  let data = {};
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch (error) {
+    throw new Error(`La API no devolvio JSON valido en ${API_BASE || "esta web"}. Comprueba que el host envie las rutas /api al servidor Node.`);
+  }
   if (!response.ok) throw new Error(data.error || "Error de conexion");
   return data;
 }
