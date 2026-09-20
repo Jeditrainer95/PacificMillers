@@ -77,14 +77,6 @@
       "available": true
     },
     {
-      "id": "pb-menu-002",
-      "name": "Ensalada caprese",
-      "category": "Salado",
-      "price": 16,
-      "description": "Tomate fresco, mozzarella y albahaca, alinados con aceite de oliva.",
-      "available": true
-    },
-    {
       "id": "pb-menu-003",
       "name": "Ensalada de gambas al coco",
       "category": "Salado",
@@ -98,14 +90,6 @@
       "category": "Salado",
       "price": 15,
       "description": "Pan italiano esponjoso, horneado con aceite de oliva y hierbas aromaticas.",
-      "available": true
-    },
-    {
-      "id": "pb-menu-005",
-      "name": "Sandwich de jamon queso",
-      "category": "Salado",
-      "price": 320,
-      "description": "Pan tostado con jamon y queso fundido, sencillo y delicioso.",
       "available": true
     },
     {
@@ -319,15 +303,15 @@
   ],
   "orders": [
     {
-      "id": "9597d4f1-4569-4cd7-943a-794fd60a4aac",
+      "id": "69360838-3640-4d9c-a6f0-351e4ba689b4",
       "code": "PB-1001",
       "businessName": "Tequila",
       "contact": "Jeditrainer",
-      "details": "1x Aros de cebolla ($14 c/u), 1x Ensalada caprese ($16 c/u). Total estimado: $30",
-      "status": "recibido",
-      "note": "Encargo recibido. El equipo lo revisara pronto.",
-      "createdAt": "2026-09-20T03:04:34.630Z",
-      "updatedAt": "2026-09-20T03:04:34.630Z"
+      "details": "1x Aros de cebolla ($14 c/u), 1x Ensalada de gambas al coco ($20 c/u), 1x Focaccia ($15 c/u). Total estimado: $49",
+      "status": "preparando",
+      "note": "El equipo del pedido lo esta preparando",
+      "createdAt": "2026-09-20T11:56:15.397Z",
+      "updatedAt": "2026-09-20T11:58:24.533Z"
     }
   ],
   "conventions": [
@@ -344,13 +328,6 @@
       "discount": 10,
       "active": true,
       "notes": "Aplicable a facturas de catering o eventos."
-    },
-    {
-      "id": "5b1e8819-9ebb-4b98-a53d-4c2057e4b94a",
-      "name": "Tequila",
-      "discount": 15,
-      "active": true,
-      "notes": "Convenio activo con 15% de descuento"
     }
   ],
   "invoices": [

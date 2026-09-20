@@ -6,7 +6,7 @@ const state = {
 
 const $ = selector => document.querySelector(selector);
 const $$ = selector => Array.from(document.querySelectorAll(selector));
-const API_BASE = location.port === "4321" ? "" : "http://localhost:4321";
+const API_BASE = (window.PB_API_BASE || localStorage.getItem("pb_api_base") || "").replace(/\/$/, "");
 let pendingOrderDeleteId = null;
 let pendingUserDeleteId = null;
 let editingUserId = null;
@@ -114,7 +114,7 @@ async function api(path, options = {}) {
   try {
     response = await fetch(`${API_BASE}${path}`, { ...options, headers });
   } catch (error) {
-    throw new Error(`No se puede conectar con la API en ${API_BASE || "esta web"}. Arranca node server.js y recarga.`);
+    throw new Error(`No se puede conectar con la API en ${API_BASE || "esta web"}. Comprueba que el servidor del host tenga activas las rutas /api.`);
   }
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.error || "Error de conexion");

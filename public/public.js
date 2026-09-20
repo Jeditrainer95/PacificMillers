@@ -4,7 +4,7 @@ const publicState = {
 };
 
 const $ = selector => document.querySelector(selector);
-const API_BASE = location.port === "4321" ? "" : "http://localhost:4321";
+const API_BASE = (window.PB_API_BASE || localStorage.getItem("pb_api_base") || "").replace(/\/$/, "");
 
 function money(value) {
   return `$${Number(value || 0).toLocaleString("es-ES", { maximumFractionDigits: 0 })}`;
