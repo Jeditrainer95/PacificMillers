@@ -20,7 +20,9 @@ Paginas:
 
 ## Usuarios iniciales
 
-
+- `jefe` / `Pacific2026!`
+- `encargado` / `Encargado2026!`
+- `empleado` / `Empleado2026!`
 
 El jefe y los encargados pueden gestionar la pagina. Los empleados solo pueden ver el contenido del panel.
 
