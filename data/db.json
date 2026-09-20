@@ -38,6 +38,17 @@
       "createdAt": "2026-09-20T02:37:26.884Z",
       "email": "",
       "active": true
+    },
+    {
+      "id": "df7c73ad-2989-4061-8ae0-d5ac063eebf3",
+      "username": "testx",
+      "name": "Test X",
+      "email": "",
+      "role": "empleado",
+      "active": true,
+      "salt": "e02051c6ce69b90e6fa9f0e3",
+      "passwordHash": "55a811cdc7ad939743fc74e3051b35c59114bfdbfa8d1d0b335a9f78c50492cc",
+      "createdAt": "2026-09-20T16:10:19.288Z"
     }
   ],
   "announcements": [
@@ -54,6 +65,22 @@
       "text": "Los negocios aliados pueden hacer encargos y revisar el estado desde esta web.",
       "visible": true,
       "createdAt": "2026-09-20T01:21:52.131Z"
+    },
+    {
+      "id": "59e9e549-0c9c-47b6-96b4-4342a92901ee",
+      "title": "Test",
+      "summary": "Resumen",
+      "text": "Resumen",
+      "content": "Contenido",
+      "category": "Comunicado",
+      "author": "Direccion Pacific Bluffs",
+      "status": "publicado",
+      "visible": true,
+      "featured": "",
+      "coverImage": "",
+      "images": [],
+      "createdAt": "2026-09-20T16:10:19.293Z",
+      "updatedAt": "2026-09-20T16:10:19.293Z"
     }
   ],
   "menuItems": [

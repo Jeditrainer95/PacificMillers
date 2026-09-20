@@ -1,0 +1,9 @@
+PACIFIC BLUFFS - DESPLIEGUE
+
+1. Sube toda esta carpeta al servidor.
+2. Asegurate de que Node.js >= 18 este habilitado.
+3. Inicia server.js (o ejecuta: npm start).
+4. Usa el puerto asignado por el hosting mediante la variable PORT.
+5. Si Apache esta delante de Node, deja el .htaccess incluido.
+
+IMPORTANTE: un hosting que solo permite HTML/PHP y no permite ejecutar Node.js NO puede ejecutar este backend tal como esta. En ese caso hay que adaptar el backend a la tecnologia que soporte el hosting.

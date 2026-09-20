@@ -1,22 +1,38 @@
 # Pacific Bluffs
 
-Web veraniega para el negocio Pacific Bluffs de GTA RP con anuncios publicos, carta, pedidos, calculadora de convenios y panel interno con roles.
+Web de Pacific Bluffs con anuncios publicos, carta, pedidos, calculadora de convenios y panel interno con usuarios y roles.
 
-## Arranque
+## Instalacion recomendada (Node.js)
 
-```powershell
-node server.js
+Este proyecto necesita **Node.js** porque el panel y la base de datos funcionan mediante `server.js`.
+
+```bash
+npm start
 ```
 
-Luego abre `http://localhost:4321`.
+Por defecto escucha en el puerto `4321`. Tambien puedes definir otro puerto:
+
+```bash
+PORT=4321 npm start
+```
 
 Paginas:
 
-- Inicio: `http://localhost:4321`
-- Anuncios: `http://localhost:4321/anuncios`
-- Carta: `http://localhost:4321/carta`
-- Pedidos: `http://localhost:4321/pedidos`
-- Panel interno: `http://localhost:4321/panel`
+- `/`
+- `/anuncios`
+- `/carta`
+- `/pedidos`
+- `/panel`
+
+## Si usas Apache/cPanel
+
+El `.htaccess` incluido envia `/api/*` al proceso Node en `127.0.0.1:4321` y sirve las paginas desde `public/`.
+
+El hosting debe permitir ejecutar Node y tener disponibles `mod_rewrite`, `mod_proxy` y `mod_proxy_http`. Si tu proveedor usa el selector de aplicaciones Node, configura `server.js` como archivo de inicio y usa el puerto que proporcione mediante `PORT`.
+
+## Base de datos
+
+Los datos se guardan en `data/db.json`. Haz copia de seguridad de ese archivo antes de sustituir una instalacion que ya tenga datos reales.
 
 ## Usuarios iniciales
 
@@ -24,8 +40,4 @@ Paginas:
 - `encargado` / `Encargado2026!`
 - `empleado` / `Empleado2026!`
 
-El jefe y los encargados pueden gestionar la pagina. Los empleados solo pueden ver el contenido del panel.
-
-## Datos
-
-La base de datos local se guarda en `data/db.json`.
+El jefe puede gestionar usuarios. Jefe y encargado pueden gestionar el contenido del negocio.
