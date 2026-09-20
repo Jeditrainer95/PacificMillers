@@ -1,12 +1,10 @@
 const publicState = {
   publicData: null,
-  orderItems: {},
-  activeAnnouncement: null
+  orderItems: {}
 };
 
 const $ = selector => document.querySelector(selector);
-const APP_BASE = new URL(".", document.currentScript?.src || location.href).pathname;
-const API_BASE = (window.PB_API_BASE || localStorage.getItem("pb_api_base") || (location.protocol === "file:" ? "" : APP_BASE.replace(/\/$/, ""))).replace(/\/$/, "");
+const API_BASE = location.port === "4321" ? "" : "http://localhost:4321";
 
 function money(value) {
   return `$${Number(value || 0).toLocaleString("es-ES", { maximumFractionDigits: 0 })}`;
@@ -16,15 +14,7 @@ async function api(path, options = {}) {
   const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
   const url = path.startsWith("/api/") ? `${API_BASE}${path}` : path;
   const response = await fetch(url, { ...options, headers });
-  const text = await response.text();
-  let data = {};
-  try {
-    data = text ? JSON.parse(text) : {};
-  } catch (error) {
-    throw new Error(path.startsWith("/api/")
-      ? "La API no esta devolviendo JSON valido. Revisa que el host sirva el backend Node y no una pagina HTML en /api."
-      : "No se pudo leer el archivo de datos publicos.");
-  }
+  const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.error || "Error de conexion");
   return data;
 }
@@ -33,7 +23,7 @@ async function loadPublicData() {
   try {
     return await api("/api/public");
   } catch (error) {
-    return api(`${APP_BASE}public-data.json`);
+    return api("public-data.json");
   }
 }
 
@@ -46,235 +36,8 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
-function escapeAttr(value) {
-  return escapeHtml(value).replaceAll("\n", " ");
-}
-
 function card(title, text, extra = "") {
   return `<article class="card"><h3>${escapeHtml(title)}</h3><p>${escapeHtml(text)}</p>${extra}</article>`;
-}
-
-function formatDateTime(value) {
-  if (!value) return "Sin fecha";
-  return new Date(value).toLocaleString("es-ES", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit"
-  });
-}
-
-function formatDateShort(value) {
-  if (!value) return "Sin fecha";
-  return new Date(value).toLocaleDateString("es-ES", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric"
-  });
-}
-
-function announcementUrl(id) {
-  return location.protocol === "file:" ? `anuncios.html?id=${encodeURIComponent(id)}` : `${APP_BASE}anuncios/${encodeURIComponent(id)}`;
-}
-
-function currentAnnouncementId() {
-  const directPath = location.pathname.match(/\/anuncios\/([^/]+)/);
-  if (directPath) return decodeURIComponent(directPath[1]);
-  return new URLSearchParams(location.search).get("id");
-}
-
-function announcementSummary(item) {
-  return item.summary || item.text || String(item.content || "").replace(/[#*_`>\[\]()~-]/g, "").slice(0, 180);
-}
-
-function announcementCover(item, mode = "card") {
-  if (item.coverImage) {
-    return `<img src="${escapeAttr(item.coverImage)}" alt="${escapeAttr(item.title)}">`;
-  }
-  return `
-    <div class="announcement-cover-empty ${mode === "hero" ? "large" : ""}" aria-hidden="true">
-      <span>Pacific Bluffs</span>
-      <strong>${escapeHtml((item.category || "Aviso").slice(0, 2).toUpperCase())}</strong>
-    </div>
-  `;
-}
-
-function renderMarkdown(value) {
-  const lines = String(value || "").replace(/\r\n/g, "\n").split("\n");
-  const html = [];
-  let listOpen = false;
-
-  function closeList() {
-    if (listOpen) {
-      html.push("</ul>");
-      listOpen = false;
-    }
-  }
-
-  function inline(text) {
-    return escapeHtml(text)
-      .replace(/!\[([^\]]*)\]\((https?:\/\/[^)\s]+|\/[^)\s]+|data:image\/[^)\s]+)\)/g, '<img src="$2" alt="$1">')
-      .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>')
-      .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
-      .replace(/\*([^*]+)\*/g, "<em>$1</em>");
-  }
-
-  lines.forEach(line => {
-    const trimmed = line.trim();
-    if (!trimmed) {
-      closeList();
-      return;
-    }
-    if (trimmed === "---") {
-      closeList();
-      html.push("<hr>");
-      return;
-    }
-    if (trimmed.startsWith("### ")) {
-      closeList();
-      html.push(`<h3>${inline(trimmed.slice(4))}</h3>`);
-      return;
-    }
-    if (trimmed.startsWith("## ")) {
-      closeList();
-      html.push(`<h2>${inline(trimmed.slice(3))}</h2>`);
-      return;
-    }
-    if (trimmed.startsWith("# ")) {
-      closeList();
-      html.push(`<h2>${inline(trimmed.slice(2))}</h2>`);
-      return;
-    }
-    if (/^[-*]\s+/.test(trimmed)) {
-      if (!listOpen) {
-        html.push("<ul>");
-        listOpen = true;
-      }
-      html.push(`<li>${inline(trimmed.replace(/^[-*]\s+/, ""))}</li>`);
-      return;
-    }
-    closeList();
-    html.push(`<p>${inline(trimmed)}</p>`);
-  });
-
-  closeList();
-  return html.join("");
-}
-
-function renderAnnouncementCard(item) {
-  return `
-    <article class="announcement-card" data-announcement-id="${escapeAttr(item.id)}">
-      <button class="announcement-card-hit" data-action="preview-announcement" data-id="${escapeAttr(item.id)}" type="button" aria-label="Ver anuncio ${escapeAttr(item.title)}"></button>
-      <div class="announcement-cover">${announcementCover(item)}</div>
-      <div class="announcement-card-body">
-        <div class="announcement-meta">
-          <span>${escapeHtml(item.category || "Comunicado")}</span>
-          <span>${escapeHtml(formatDateShort(item.createdAt))}</span>
-        </div>
-        <h2>${escapeHtml(item.title)}</h2>
-        <p>${escapeHtml(announcementSummary(item))}</p>
-        <div class="announcement-foot">
-          <span>${escapeHtml(item.author || "Pacific Bluffs")}</span>
-          <span class="badge">${escapeHtml(item.status || "publicado")}</span>
-        </div>
-        <button class="button ghost announcement-preview-button" data-action="preview-announcement" data-id="${escapeAttr(item.id)}" type="button">Ver anuncio</button>
-      </div>
-    </article>
-  `;
-}
-
-function renderAnnouncementList(announcements) {
-  const wrap = $("#announcements");
-  if (!wrap) return;
-  wrap.innerHTML = announcements.length
-    ? announcements.map(renderAnnouncementCard).join("")
-    : `<div class="empty-state panel"><h3>No hay anuncios disponibles</h3><p>Cuando el equipo publique comunicados, apareceran aqui.</p></div>`;
-}
-
-function renderAnnouncementModal(item) {
-  const firstLines = String(item.content || item.text || "").split("\n").filter(Boolean).slice(0, 3).join("\n");
-  return `
-    <div id="announcementPreviewModal" class="modal-backdrop announcement-preview-modal" role="dialog" aria-modal="true" aria-labelledby="announcementPreviewTitle">
-      <article class="modal-panel announcement-preview-panel">
-        <div class="announcement-preview-media">${announcementCover(item, "hero")}</div>
-        <div class="announcement-preview-content">
-          <div class="announcement-meta">
-            <span>${escapeHtml(item.category || "Comunicado")}</span>
-            <span>${escapeHtml(formatDateTime(item.createdAt))}</span>
-          </div>
-          <h2 id="announcementPreviewTitle">${escapeHtml(item.title)}</h2>
-          <p>${escapeHtml(announcementSummary(item))}</p>
-          <div class="announcement-preview-facts">
-            <span><strong>Autor</strong>${escapeHtml(item.author || "Pacific Bluffs")}</span>
-            <span><strong>Estado</strong>${escapeHtml(item.status || "publicado")}</span>
-          </div>
-          ${item.featured ? `<div class="announcement-featured"><strong>Destacado</strong><p>${escapeHtml(item.featured)}</p></div>` : ""}
-          <div class="announcement-excerpt">${renderMarkdown(firstLines)}</div>
-          <div class="modal-actions">
-            <button class="button ghost" data-action="close-announcement-preview" type="button">Cerrar</button>
-            <a class="button primary" href="${announcementUrl(item.id)}">Leer anuncio completo</a>
-          </div>
-        </div>
-      </article>
-    </div>
-  `;
-}
-
-function openAnnouncementPreview(id) {
-  const item = publicState.publicData?.announcements.find(announcement => announcement.id === id);
-  if (!item) return;
-  $("#announcementPreviewModal")?.remove();
-  document.body.insertAdjacentHTML("beforeend", renderAnnouncementModal(item));
-  $("#announcementPreviewModal [data-action='close-announcement-preview']")?.focus();
-}
-
-function closeAnnouncementPreview() {
-  $("#announcementPreviewModal")?.remove();
-}
-
-async function renderAnnouncementDetail(id) {
-  const container = $("#announcementDetail");
-  if (!container) return;
-  container.innerHTML = `
-    <article class="announcement-detail-shell">
-      <span class="skeleton skeleton-badge"></span>
-      <span class="skeleton skeleton-title"></span>
-      <span class="skeleton"></span>
-    </article>
-  `;
-  try {
-    let item = publicState.publicData?.announcements.find(announcement => announcement.id === id);
-    if (!item) item = await api(`/api/announcements/${encodeURIComponent(id)}`);
-    document.title = `${item.title} | Pacific Bluffs`;
-    container.innerHTML = `
-      <article class="announcement-detail-shell">
-        <a class="back-link" href="${location.protocol === "file:" ? "anuncios.html" : `${APP_BASE}anuncios`}">← Volver a anuncios</a>
-        <header class="announcement-detail-header">
-          <div>
-            <p class="eyebrow">${escapeHtml(item.category || "Comunicado")}</p>
-            <h1>${escapeHtml(item.title)}</h1>
-          </div>
-          <div class="announcement-detail-meta">
-            <span><strong>Autor</strong>${escapeHtml(item.author || "Pacific Bluffs")}</span>
-            <span><strong>Publicado</strong>${escapeHtml(formatDateTime(item.createdAt))}</span>
-            <span><strong>Estado</strong>${escapeHtml(item.status || "publicado")}</span>
-          </div>
-        </header>
-        <div class="announcement-detail-cover">${announcementCover(item, "hero")}</div>
-        ${item.featured ? `<aside class="announcement-featured"><strong>Destacado</strong><p>${escapeHtml(item.featured)}</p></aside>` : ""}
-        <div class="announcement-content">${renderMarkdown(item.content || item.text || item.summary)}</div>
-        ${item.images?.length ? `
-          <section class="announcement-gallery" aria-label="Imagenes del anuncio">
-            ${item.images.filter(image => image.src !== item.coverImage).map(image => `<img src="${escapeAttr(image.src)}" alt="${escapeAttr(image.name || item.title)}">`).join("")}
-          </section>
-        ` : ""}
-        <a class="button ghost back-button" href="${location.protocol === "file:" ? "anuncios.html" : `${APP_BASE}anuncios`}">← Volver a anuncios</a>
-      </article>
-    `;
-  } catch (error) {
-    container.innerHTML = `<div class="empty-state panel"><h3>Anuncio no encontrado</h3><p>No hemos encontrado este comunicado o ya no esta publicado.</p><a class="button ghost" href="${location.protocol === "file:" ? "anuncios.html" : `${APP_BASE}anuncios`}">Volver a anuncios</a></div>`;
-  }
 }
 
 function groupByCategory(items) {
@@ -294,6 +57,17 @@ function statusLabel(status) {
     entregado: "Entregado",
     cancelado: "Cancelado"
   }[status] || status;
+}
+
+function formatDateTime(value) {
+  if (!value) return "Sin fecha";
+  return new Date(value).toLocaleString("es-ES", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
 }
 
 function extractOrderTotal(details) {
@@ -360,11 +134,13 @@ function renderOrderLookup(order) {
         </div>
         <strong>${escapeHtml(total)}</strong>
       </div>
+
       <div class="lookup-facts">
         <div><span>Fecha del pedido</span><strong>${formatDateTime(order.createdAt)}</strong></div>
         <div><span>Cliente</span><strong>${escapeHtml(order.businessName || "No indicado")}</strong></div>
-        <div><span>Metodo de pago</span><strong>No indicado</strong></div>
+        <div><span>Método de pago</span><strong>No indicado</strong></div>
       </div>
+
       <div class="lookup-products">
         <h4>Productos solicitados</h4>
         ${products.length ? products.map(item => `
@@ -374,6 +150,7 @@ function renderOrderLookup(order) {
           </div>
         `).join("") : `<p class="form-note">${escapeHtml(order.details || "Sin detalle de productos.")}</p>`}
       </div>
+
       <div class="lookup-status">
         <h4>Estado del pedido</h4>
         ${renderStatusProgress(order.status)}
@@ -387,7 +164,7 @@ function renderOrderNotFound() {
   return `
     <article class="lookup-error">
       <h3>Pedido no encontrado</h3>
-      <p>No hemos encontrado ningun pedido asociado a este codigo. Comprueba que el codigo introducido sea correcto e intentalo de nuevo.</p>
+      <p>No hemos encontrado ningún pedido asociado a este código. Comprueba que el código introducido sea correcto e inténtalo de nuevo.</p>
     </article>
   `;
 }
@@ -414,11 +191,11 @@ function renderOrderLookupLoading() {
 function renderCreatedOrder(order) {
   return `
     <div class="order-created-card">
-      <h3>Pedido realizado correctamente</h3>
-      <p>Tu codigo de pedido es:</p>
+      <h3>¡Pedido realizado correctamente!</h3>
+      <p>Tu código de pedido es:</p>
       <strong>${escapeHtml(order.code)}</strong>
-      <p>Guarda este codigo para poder consultar el estado de tu pedido posteriormente.</p>
-      <button class="button ghost copyOrderCode" data-code="${escapeHtml(order.code)}" type="button">Copiar codigo</button>
+      <p>Guarda este código para poder consultar el estado de tu pedido posteriormente.</p>
+      <button class="button ghost copyOrderCode" data-code="${escapeHtml(order.code)}" type="button">Copiar código</button>
     </div>
   `;
 }
@@ -449,7 +226,9 @@ function renderOrderSummary() {
     return;
   }
 
-  const detailText = lines.map(item => `${item.quantity}x ${item.name} (${money(item.price)} c/u)`).join(", ");
+  const detailText = lines
+    .map(item => `${item.quantity}x ${item.name} (${money(item.price)} c/u)`)
+    .join(", ");
   summary.innerHTML = lines.map(item => `
     <div class="order-summary-line">
       <span>${item.quantity}x ${escapeHtml(item.name)}</span>
@@ -492,12 +271,11 @@ async function loadPublic() {
   const tagline = $("#businessTagline");
   if (tagline) tagline.textContent = business.tagline;
 
-  const detailId = currentAnnouncementId();
-  if (detailId) {
-    $("#announcementListView")?.classList.add("hidden");
-    await renderAnnouncementDetail(detailId);
-  } else {
-    renderAnnouncementList(announcements);
+  const announcementsWrap = $("#announcements");
+  if (announcementsWrap) {
+    announcementsWrap.innerHTML = announcements.length
+      ? announcements.map(item => card(item.title, item.text)).join("")
+      : card("Sin anuncios", "Todavia no hay comunicados visibles.");
   }
 
   const menuImage = $("#menuImage");
@@ -539,27 +317,6 @@ async function loadPublic() {
 }
 
 function bindEvents() {
-  document.addEventListener("click", async event => {
-    const previewButton = event.target.closest("[data-action='preview-announcement']");
-    if (previewButton) {
-      openAnnouncementPreview(previewButton.dataset.id);
-      return;
-    }
-
-    if (event.target.closest("[data-action='close-announcement-preview']") || event.target.id === "announcementPreviewModal") {
-      closeAnnouncementPreview();
-      return;
-    }
-
-    const copyButton = event.target.closest(".copyOrderCode");
-    if (!copyButton) return;
-    await navigator.clipboard?.writeText(copyButton.dataset.code).catch(() => {});
-    copyButton.textContent = "Codigo copiado";
-    setTimeout(() => {
-      copyButton.textContent = "Copiar codigo";
-    }, 1800);
-  });
-
   const orderPicker = $("#orderMenuPicker");
   if (orderPicker) {
     orderPicker.addEventListener("click", event => {
@@ -623,6 +380,16 @@ function bindEvents() {
       }
     });
   }
+
+  document.addEventListener("click", async event => {
+    const copyButton = event.target.closest(".copyOrderCode");
+    if (!copyButton) return;
+    await navigator.clipboard?.writeText(copyButton.dataset.code).catch(() => {});
+    copyButton.textContent = "Código copiado";
+    setTimeout(() => {
+      copyButton.textContent = "Copiar código";
+    }, 1800);
+  });
 }
 
 async function init() {

@@ -6,14 +6,10 @@ const state = {
 
 const $ = selector => document.querySelector(selector);
 const $$ = selector => Array.from(document.querySelectorAll(selector));
-const APP_BASE = new URL(".", document.currentScript?.src || location.href).pathname;
-const CONFIGURED_API_BASE = (window.PB_API_BASE || localStorage.getItem("pb_api_base") || "").replace(/\/$/, "");
-const DEFAULT_API_BASE = location.protocol === "file:" ? "" : APP_BASE.replace(/\/$/, "");
+const API_BASE = location.port === "4321" ? "" : "http://localhost:4321";
 let pendingOrderDeleteId = null;
 let pendingUserDeleteId = null;
 let editingUserId = null;
-let editingAnnouncementId = null;
-let announcementImages = [];
 
 function money(value) {
   return `$${Number(value || 0).toLocaleString("es-ES", { maximumFractionDigits: 0 })}`;
@@ -74,20 +70,6 @@ function showUserMessage(message, type = "ok") {
   box.classList.remove("hidden");
 }
 
-function showPanelMessage(message, type = "ok") {
-  const dashboard = $("#dashboard");
-  if (!dashboard) return;
-  let box = $("#panelActionMessage");
-  if (!box) {
-    box = document.createElement("div");
-    box.id = "panelActionMessage";
-    dashboard.insertBefore(box, $("#readonlyNotice"));
-  }
-  box.textContent = message;
-  box.className = `notice user-message ${type === "error" ? "error-text" : ""}`;
-  box.classList.remove("hidden");
-}
-
 function openUserModal(userId = null) {
   if (!canManageUsers()) return;
   editingUserId = userId;
@@ -128,66 +110,15 @@ function closeUserDeleteModal() {
 async function api(path, options = {}) {
   const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
   if (state.token) headers.Authorization = `Bearer ${state.token}`;
-  const apiBases = CONFIGURED_API_BASE
-    ? [CONFIGURED_API_BASE]
-    : Array.from(new Set([DEFAULT_API_BASE, ""]));
-  let lastError = null;
-
-  for (const base of apiBases) {
-    let response;
-    try {
-      response = await fetch(`${base}${path}`, { ...options, headers });
-    } catch (error) {
-      lastError = new Error(`No se puede conectar con la API en ${base || "esta web"}.`);
-      continue;
-    }
-
-    const text = await response.text();
-    let data = {};
-    try {
-      data = parseJsonResponse(text);
-    } catch (error) {
-      lastError = new Error(`La API respondio con datos no validos en ${base || "esta web"}. Revisa que /api apunte al servidor Node y no a una pagina HTML.`);
-      continue;
-    }
-
-    if (!response.ok) throw new Error(data.error || "Error de conexion");
-    return data;
-  }
-
-  throw lastError || new Error("No se pudo conectar con la API.");
-}
-
-function parseJsonResponse(text) {
-  const clean = String(text || "").trim();
-  if (!clean) return {};
+  let response;
   try {
-    return JSON.parse(clean);
+    response = await fetch(`${API_BASE}${path}`, { ...options, headers });
   } catch (error) {
-    const start = clean.search(/[\[{]/);
-    if (start < 0) throw error;
-    let depth = 0;
-    let inString = false;
-    let escaped = false;
-    for (let index = start; index < clean.length; index += 1) {
-      const char = clean[index];
-      if (inString) {
-        if (escaped) {
-          escaped = false;
-        } else if (char === "\\") {
-          escaped = true;
-        } else if (char === "\"") {
-          inString = false;
-        }
-        continue;
-      }
-      if (char === "\"") inString = true;
-      if (char === "{" || char === "[") depth += 1;
-      if (char === "}" || char === "]") depth -= 1;
-      if (depth === 0) return JSON.parse(clean.slice(start, index + 1));
-    }
-    throw error;
+    throw new Error(`No se puede conectar con la API en ${API_BASE || "esta web"}. Arranca node server.js y recarga.`);
   }
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || "Error de conexion");
+  return data;
 }
 
 function escapeHtml(value) {
@@ -197,129 +128,6 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
-}
-
-function escapeAttr(value) {
-  return escapeHtml(value).replaceAll("\n", " ");
-}
-
-function announcementSummary(item) {
-  return item.summary || item.text || String(item.content || "").replace(/[#*_`>\[\]()~-]/g, "").slice(0, 160);
-}
-
-function resetAnnouncementEditor() {
-  editingAnnouncementId = null;
-  announcementImages = [];
-  const form = $("#announcementForm");
-  if (!form) return;
-  form.reset();
-  form.id.value = "";
-  form.author.value = state.user?.name || "Pacific Bluffs";
-  form.status.value = "publicado";
-  form.visible.checked = true;
-  $("#announcementFormTitle").textContent = "Crear anuncio";
-  $("#announcementSubmit").textContent = "Publicar anuncio";
-  renderAnnouncementImagePreview();
-}
-
-function editAnnouncement(id) {
-  if (!canManageAny()) return;
-  const item = state.dashboard.announcements.find(announcement => announcement.id === id);
-  if (!item) return;
-  editingAnnouncementId = id;
-  announcementImages = Array.isArray(item.images) ? item.images.map(image => ({ ...image })) : [];
-  if (item.coverImage && !announcementImages.some(image => image.src === item.coverImage)) {
-    announcementImages.unshift({ id: `cover-${Date.now()}`, name: "Portada", src: item.coverImage, isCover: true });
-  }
-  announcementImages = announcementImages.map((image, index) => ({ ...image, isCover: image.src === item.coverImage || image.isCover || index === 0 }));
-  const form = $("#announcementForm");
-  form.id.value = item.id;
-  form.title.value = item.title || "";
-  form.summary.value = item.summary || item.text || "";
-  form.category.value = item.category || "Comunicado";
-  form.author.value = item.author || state.user?.name || "Pacific Bluffs";
-  form.status.value = item.status || "publicado";
-  form.featured.value = item.featured || "";
-  form.content.value = item.content || item.text || "";
-  form.visible.checked = item.visible !== false;
-  $("#announcementFormTitle").textContent = "Editar anuncio";
-  $("#announcementSubmit").textContent = "Guardar cambios";
-  renderAnnouncementImagePreview();
-  form.scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
-function renderAnnouncementImagePreview() {
-  const wrap = $("#announcementImagePreview");
-  if (!wrap) return;
-  wrap.innerHTML = announcementImages.length
-    ? announcementImages.map(image => `
-      <article class="image-preview-item">
-        <img src="${escapeAttr(image.src)}" alt="${escapeAttr(image.name)}">
-        <div>
-          <strong>${escapeHtml(image.name || "Imagen")}</strong>
-          <span>${image.isCover ? "Portada" : "Imagen adicional"}</span>
-        </div>
-        <button class="button ghost" data-action="set-announcement-cover" data-id="${escapeAttr(image.id)}" type="button">Portada</button>
-        <button class="button danger" data-action="remove-announcement-image" data-id="${escapeAttr(image.id)}" type="button">Eliminar</button>
-      </article>
-    `).join("")
-    : `<p class="form-note">Puedes publicar sin imagen o anadir una portada y galeria.</p>`;
-}
-
-function resizeImage(file) {
-  const validTypes = ["image/jpeg", "image/png", "image/webp"];
-  if (!validTypes.includes(file.type)) {
-    return Promise.reject(new Error("Solo se permiten imagenes JPG, PNG o WebP."));
-  }
-  if (file.size > 4_000_000) {
-    return Promise.reject(new Error("La imagen supera 4 MB."));
-  }
-
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error("No se pudo leer la imagen."));
-    reader.onload = () => {
-      const image = new Image();
-      image.onerror = () => reject(new Error("No se pudo procesar la imagen."));
-      image.onload = () => {
-        const max = 1400;
-        const scale = Math.min(1, max / Math.max(image.width, image.height));
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.max(1, Math.round(image.width * scale));
-        canvas.height = Math.max(1, Math.round(image.height * scale));
-        const context = canvas.getContext("2d");
-        context.drawImage(image, 0, 0, canvas.width, canvas.height);
-        resolve({
-          id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-          name: file.name,
-          src: canvas.toDataURL("image/jpeg", 0.82),
-          isCover: announcementImages.length === 0
-        });
-      };
-      image.src = reader.result;
-    };
-    reader.readAsDataURL(file);
-  });
-}
-
-function applyEditorFormat(command) {
-  const textarea = $("#announcementForm textarea[name='content']");
-  if (!textarea) return;
-  const start = textarea.selectionStart;
-  const end = textarea.selectionEnd;
-  const selected = textarea.value.slice(start, end) || "texto";
-  const formats = {
-    bold: `**${selected}**`,
-    italic: `*${selected}*`,
-    h2: `## ${selected}`,
-    h3: `### ${selected}`,
-    list: `- ${selected}`,
-    link: `[${selected}](https://)`,
-    divider: `${selected}\n\n---\n`
-  };
-  const replacement = formats[command] || selected;
-  textarea.setRangeText(replacement, start, end, "end");
-  textarea.focus();
 }
 
 async function refreshDashboard() {
@@ -438,63 +246,18 @@ function renderContentTab() {
       </form>
 
       <form id="announcementForm" class="panel">
-        <div class="panel-title">
-          <span id="announcementFormTitle">Crear anuncio</span>
-          <button class="button ghost" data-action="reset-announcement-editor" type="button">Nuevo</button>
-        </div>
-        <input name="id" type="hidden">
+        <h3>Nuevo anuncio</h3>
         <label>Titulo
           <input name="title" ${disabledAttr()} required>
         </label>
-        <div class="form-grid">
-          <label>Categoria
-            <input name="category" ${disabledAttr()} value="Comunicado" required>
-          </label>
-          <label>Autor
-            <input name="author" ${disabledAttr()} value="${escapeAttr(state.user?.name || "Pacific Bluffs")}" required>
-          </label>
-        </div>
-        <label>Descripcion corta
-          <textarea name="summary" ${disabledAttr()} maxlength="260" placeholder="Resumen visible en tarjetas y vista previa."></textarea>
+        <label>Texto
+          <textarea name="text" ${disabledAttr()} required></textarea>
         </label>
-        <label>Informacion destacada
-          <input name="featured" ${disabledAttr()} placeholder="Horario especial, requisito, aviso importante...">
+        <label class="inline-check">
+          <input name="visible" type="checkbox" ${disabledAttr()} checked>
+          Visible para civiles
         </label>
-        <div class="rich-editor">
-          <div class="editor-toolbar" aria-label="Formato del contenido">
-            <button class="button ghost" data-format="bold" type="button">B</button>
-            <button class="button ghost" data-format="italic" type="button">I</button>
-            <button class="button ghost" data-format="h2" type="button">Titulo</button>
-            <button class="button ghost" data-format="h3" type="button">Subtitulo</button>
-            <button class="button ghost" data-format="list" type="button">Lista</button>
-            <button class="button ghost" data-format="link" type="button">Enlace</button>
-            <button class="button ghost" data-format="divider" type="button">Separador</button>
-          </div>
-          <label>Contenido completo
-            <textarea name="content" ${disabledAttr()} required placeholder="Escribe el anuncio completo. Puedes usar negrita, titulos, listas, enlaces e imagenes."></textarea>
-          </label>
-        </div>
-        <div class="announcement-uploader">
-          <label>Imagenes del anuncio
-            <input id="announcementImageInput" ${disabledAttr()} type="file" accept="image/png,image/jpeg,image/webp" multiple>
-          </label>
-          <p class="form-note">Opcional. Se optimizan antes de guardar. Maximo 8 imagenes, 4 MB por archivo.</p>
-          <div id="announcementImagePreview" class="image-preview-list"></div>
-        </div>
-        <div class="form-grid">
-          <label>Estado
-            <select name="status" ${disabledAttr()}>
-              <option value="publicado">Publicado</option>
-              <option value="borrador">Borrador</option>
-              <option value="archivado">Archivado</option>
-            </select>
-          </label>
-          <label class="inline-check">
-            <input name="visible" type="checkbox" ${disabledAttr()} checked>
-            Visible para civiles
-          </label>
-        </div>
-        <button id="announcementSubmit" class="button primary" ${disabledAttr()} type="submit">Publicar anuncio</button>
+        <button class="button primary" ${disabledAttr()} type="submit">Publicar</button>
       </form>
 
       <form id="menuForm" class="panel">
@@ -521,7 +284,7 @@ function renderContentTab() {
     <div class="admin-grid">
       <div class="panel">
         <h3>Anuncios actuales</h3>
-        <div class="mini-list">${state.dashboard.announcements.map(item => announcementAdminRow(item)).join("")}</div>
+        <div class="mini-list">${state.dashboard.announcements.map(item => adminRow(item.title, item.text, "announcement", item.id)).join("")}</div>
       </div>
       <div class="panel">
         <h3>Carta actual</h3>
@@ -529,7 +292,6 @@ function renderContentTab() {
       </div>
     </div>
   `;
-  renderAnnouncementImagePreview();
 }
 
 function adminRow(title, text, type, id, allowed = canManageAny()) {
@@ -539,20 +301,6 @@ function adminRow(title, text, type, id, allowed = canManageAny()) {
       <p>${escapeHtml(text)}</p>
       <div class="admin-actions">
         <button class="button ghost deleteButton" ${disabledAttr(allowed)} data-type="${type}" data-id="${id}" type="button">Eliminar</button>
-      </div>
-    </article>
-  `;
-}
-
-function announcementAdminRow(item) {
-  return `
-    <article class="card announcement-admin-row">
-      <span class="badge">${escapeHtml(item.category || "Comunicado")} · ${escapeHtml(item.status || "publicado")}</span>
-      <h3>${escapeHtml(item.title)}</h3>
-      <p>${escapeHtml(announcementSummary(item))}</p>
-      <div class="admin-actions">
-        <button class="button ghost announcementEditButton" ${disabledAttr()} data-id="${escapeAttr(item.id)}" type="button">Editar</button>
-        <button class="button danger deleteButton" ${disabledAttr()} data-type="announcement" data-id="${escapeAttr(item.id)}" type="button">Eliminar</button>
       </div>
     </article>
   `;
@@ -757,14 +505,7 @@ async function handleDashboardSubmit(event) {
   } else if (form.id === "businessForm") {
     await api("/api/business", { method: "PUT", body: JSON.stringify(data) });
   } else if (form.id === "announcementForm") {
-    data.id = editingAnnouncementId || data.id || "";
-    data.visible = form.visible.checked;
-    data.images = announcementImages.map(image => ({ ...image }));
-    data.coverImage = announcementImages.find(image => image.isCover)?.src || "";
-    data.text = data.summary;
     await api("/api/announcements", { method: "POST", body: JSON.stringify(data) });
-    editingAnnouncementId = null;
-    announcementImages = [];
   } else if (form.id === "menuForm") {
     await api("/api/menu", { method: "POST", body: JSON.stringify(data) });
   } else if (form.id === "conventionForm") {
@@ -774,8 +515,6 @@ async function handleDashboardSubmit(event) {
   }
 
   await refreshDashboard();
-  showPanelMessage("Cambios guardados correctamente.");
-  if (form.id === "announcementForm") resetAnnouncementEditor();
 }
 
 async function handleDashboardClick(event) {
@@ -804,37 +543,11 @@ async function handleDashboardClick(event) {
     await api(`/api/orders/${encodeURIComponent(pendingOrderDeleteId)}`, { method: "DELETE" });
     hideOrderDeleteModal();
     await refreshDashboard();
-    showPanelMessage("Pedido eliminado correctamente.");
     return;
   }
 
   if (modalAction?.dataset.action === "open-user-create") {
     openUserModal();
-    return;
-  }
-
-  if (modalAction?.dataset.action === "reset-announcement-editor") {
-    resetAnnouncementEditor();
-    return;
-  }
-
-  if (modalAction?.dataset.action === "set-announcement-cover") {
-    announcementImages = announcementImages.map(image => ({ ...image, isCover: image.id === modalAction.dataset.id }));
-    renderAnnouncementImagePreview();
-    return;
-  }
-
-  if (modalAction?.dataset.action === "remove-announcement-image") {
-    const removedCover = announcementImages.find(image => image.id === modalAction.dataset.id)?.isCover;
-    announcementImages = announcementImages.filter(image => image.id !== modalAction.dataset.id);
-    if (removedCover && announcementImages[0]) announcementImages[0].isCover = true;
-    renderAnnouncementImagePreview();
-    return;
-  }
-
-  const formatButton = event.target.closest("[data-format]");
-  if (formatButton) {
-    applyEditorFormat(formatButton.dataset.format);
     return;
   }
 
@@ -874,12 +587,6 @@ async function handleDashboardClick(event) {
     return;
   }
 
-  const announcementEditButton = event.target.closest(".announcementEditButton");
-  if (announcementEditButton) {
-    editAnnouncement(announcementEditButton.dataset.id);
-    return;
-  }
-
   const deleteButton = event.target.closest(".deleteButton");
   if (!deleteButton) return;
   const type = deleteButton.dataset.type;
@@ -889,7 +596,6 @@ async function handleDashboardClick(event) {
   const path = type === "announcement" ? `/api/announcements/${id}` : type === "menu" ? `/api/menu/${id}` : `/api/conventions/${id}`;
   await api(path, { method: "DELETE" });
   await refreshDashboard();
-  showPanelMessage("Elemento eliminado correctamente.");
 }
 
 function bindEvents() {
@@ -918,27 +624,8 @@ function bindEvents() {
     $("#loginPanel").classList.remove("hidden");
   });
 
-  $("#dashboard").addEventListener("submit", event => {
-    handleDashboardSubmit(event).catch(error => showPanelMessage(error.message, "error"));
-  });
-  $("#dashboard").addEventListener("click", event => {
-    handleDashboardClick(event).catch(error => showPanelMessage(error.message, "error"));
-  });
-  $("#dashboard").addEventListener("change", async event => {
-    if (event.target.id !== "announcementImageInput") return;
-    const files = Array.from(event.target.files || []);
-    if (!files.length) return;
-    try {
-      const remaining = Math.max(0, 8 - announcementImages.length);
-      const processed = await Promise.all(files.slice(0, remaining).map(resizeImage));
-      announcementImages = [...announcementImages, ...processed];
-      if (!announcementImages.some(image => image.isCover) && announcementImages[0]) announcementImages[0].isCover = true;
-      renderAnnouncementImagePreview();
-      event.target.value = "";
-    } catch (error) {
-      alert(error.message);
-    }
-  });
+  $("#dashboard").addEventListener("submit", handleDashboardSubmit);
+  $("#dashboard").addEventListener("click", handleDashboardClick);
 }
 
 async function init() {
