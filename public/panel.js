@@ -74,6 +74,20 @@ function showUserMessage(message, type = "ok") {
   box.classList.remove("hidden");
 }
 
+function showPanelMessage(message, type = "ok") {
+  const dashboard = $("#dashboard");
+  if (!dashboard) return;
+  let box = $("#panelActionMessage");
+  if (!box) {
+    box = document.createElement("div");
+    box.id = "panelActionMessage";
+    dashboard.insertBefore(box, $("#readonlyNotice"));
+  }
+  box.textContent = message;
+  box.className = `notice user-message ${type === "error" ? "error-text" : ""}`;
+  box.classList.remove("hidden");
+}
+
 function openUserModal(userId = null) {
   if (!canManageUsers()) return;
   editingUserId = userId;
@@ -760,6 +774,7 @@ async function handleDashboardSubmit(event) {
   }
 
   await refreshDashboard();
+  showPanelMessage("Cambios guardados correctamente.");
   if (form.id === "announcementForm") resetAnnouncementEditor();
 }
 
@@ -789,6 +804,7 @@ async function handleDashboardClick(event) {
     await api(`/api/orders/${encodeURIComponent(pendingOrderDeleteId)}`, { method: "DELETE" });
     hideOrderDeleteModal();
     await refreshDashboard();
+    showPanelMessage("Pedido eliminado correctamente.");
     return;
   }
 
@@ -873,6 +889,7 @@ async function handleDashboardClick(event) {
   const path = type === "announcement" ? `/api/announcements/${id}` : type === "menu" ? `/api/menu/${id}` : `/api/conventions/${id}`;
   await api(path, { method: "DELETE" });
   await refreshDashboard();
+  showPanelMessage("Elemento eliminado correctamente.");
 }
 
 function bindEvents() {
@@ -901,8 +918,12 @@ function bindEvents() {
     $("#loginPanel").classList.remove("hidden");
   });
 
-  $("#dashboard").addEventListener("submit", handleDashboardSubmit);
-  $("#dashboard").addEventListener("click", handleDashboardClick);
+  $("#dashboard").addEventListener("submit", event => {
+    handleDashboardSubmit(event).catch(error => showPanelMessage(error.message, "error"));
+  });
+  $("#dashboard").addEventListener("click", event => {
+    handleDashboardClick(event).catch(error => showPanelMessage(error.message, "error"));
+  });
   $("#dashboard").addEventListener("change", async event => {
     if (event.target.id !== "announcementImageInput") return;
     const files = Array.from(event.target.files || []);

@@ -658,8 +658,11 @@ const server = http.createServer(async (req, res) => {
       res.end();
       return;
     }
-    if (url.pathname.startsWith("/api/")) {
-      await handleApi(req, res, url);
+    const apiIndex = url.pathname.indexOf("/api/");
+    if (apiIndex >= 0) {
+      const apiUrl = new URL(url.href);
+      apiUrl.pathname = url.pathname.slice(apiIndex);
+      await handleApi(req, res, apiUrl);
       return;
     }
     serveStatic(req, res, url);
