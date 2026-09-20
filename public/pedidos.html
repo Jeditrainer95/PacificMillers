@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Pedidos | Pacific Bluffs</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Pacific Bluffs inicio">
+        <span class="brand-mark">PB</span>
+        <span class="brand-copy">
+          <strong>Pacific Bluffs</strong>
+          <small>Beach Resort</small>
+        </span>
+      </a>
+      <nav class="nav" aria-label="Navegacion principal">
+        <a href="/anuncios">Anuncios</a>
+        <a href="/carta">Carta</a>
+        <a href="/pedidos" aria-current="page">Pedidos</a>
+        <a href="/panel">Panel</a>
+      </nav>
+    </header>
+
+    <main>
+      <section id="pedidos" class="page-shell orders-page">
+        <div class="page-kicker">
+          <p class="eyebrow">Pedidos para negocios</p>
+          <h1>Crear y consultar pedidos sin perder el ritmo del servicio.</h1>
+          <p>Elige productos de la carta, envia el encargo y conserva el codigo para seguir el estado en tiempo real.</p>
+        </div>
+
+        <div class="orders-layout">
+          <form id="orderForm" class="panel public-form order-create-panel">
+            <div class="panel-title">
+              <span>Nuevo encargo</span>
+              <strong id="orderTotal">$0</strong>
+            </div>
+            <p class="panel-intro">Selecciona productos, revisa el total estimado y envia el pedido al equipo.</p>
+            <div class="form-grid">
+              <label>Negocio
+                <input name="businessName" required placeholder="Nombre del negocio">
+              </label>
+              <label>Contacto
+                <input name="contact" placeholder="Telefono, radio o Discord">
+              </label>
+            </div>
+            <div class="order-builder">
+              <div class="order-builder-heading">
+                <span>Productos de la carta</span>
+                <small>Usa + y - para ajustar cantidades.</small>
+              </div>
+              <div id="orderMenuPicker" class="order-menu-picker"></div>
+              <div id="orderSummary" class="order-summary">Selecciona productos para preparar el encargo.</div>
+              <input name="details" type="hidden" required>
+            </div>
+            <label>Notas del pedido
+              <textarea name="notes" placeholder="Hora aproximada, aclaraciones, entrega..."></textarea>
+            </label>
+            <button class="button primary" type="submit">Enviar encargo</button>
+            <div id="orderResult" class="order-created hidden"></div>
+          </form>
+
+          <form id="trackForm" class="panel public-form track-panel">
+            <p class="eyebrow">Consultar pedido</p>
+            <h2>Consulta por codigo</h2>
+            <p class="section-copy">Introduce el codigo de tu pedido para consultar su informacion y estado en tiempo real.</p>
+            <div class="lookup-search">
+              <label>Codigo del pedido
+                <input name="code" required placeholder="PB-1001" autocomplete="off">
+              </label>
+              <button class="button secondary" type="submit">Consultar pedido</button>
+            </div>
+            <div id="trackResult" class="track-result"></div>
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <span>Pacific Bluffs</span>
+      <span>Sistema web para negocio y rol</span>
+    </footer>
+
+    <script src="/public.js"></script>
+  </body>
+</html>
+

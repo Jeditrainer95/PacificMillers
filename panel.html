@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Panel Pacific Bluffs</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body class="panel-body">
+    <header class="topbar panel-topbar">
+      <a class="brand" href="index.html" aria-label="Volver a Pacific Bluffs">
+        <span class="brand-mark">PB</span>
+        <span class="brand-copy">
+          <strong>Pacific Bluffs</strong>
+          <small>Panel interno</small>
+        </span>
+      </a>
+      <nav class="nav" aria-label="Navegacion del panel">
+        <a href="index.html">Web publica</a>
+        <a href="#panel" aria-current="page">Panel</a>
+      </nav>
+    </header>
+
+    <main>
+      <section id="panel" class="page-shell admin-page">
+        <div class="page-kicker admin-kicker">
+          <p class="eyebrow">Gestion interna</p>
+          <h1>Panel del negocio</h1>
+          <p>Control operativo para pedidos, usuarios, contenidos publicos, convenios y facturacion.</p>
+        </div>
+
+        <div id="loginPanel" class="panel login-panel">
+          <div class="panel-title">
+            <span>Acceso privado</span>
+            <strong>PB</strong>
+          </div>
+          <form id="loginForm">
+            <label>Usuario
+              <input name="username" autocomplete="username" required placeholder="jefe">
+            </label>
+            <label>Contrasena
+              <input name="password" type="password" autocomplete="current-password" required placeholder="Pacific2026!">
+            </label>
+            <button class="button primary" type="submit">Entrar</button>
+            <p class="form-note">Usuarios iniciales: jefe / Pacific2026!, encargado / Encargado2026!, empleado / Empleado2026!</p>
+            <p id="loginError" class="error-text"></p>
+          </form>
+        </div>
+
+        <div id="dashboard" class="dashboard hidden">
+          <div class="dashboard-top">
+            <div>
+              <p class="eyebrow">Sesion activa</p>
+              <h3 id="sessionName">Sesion</h3>
+              <p id="sessionRole"></p>
+            </div>
+            <button id="logoutButton" class="button ghost" type="button">Salir</button>
+          </div>
+
+          <div class="tabs" role="tablist" aria-label="Secciones del panel">
+            <button class="tab active" data-tab="tab-orders" type="button">Pedidos</button>
+            <button class="tab" data-tab="tab-content" type="button">Contenido</button>
+            <button class="tab" data-tab="tab-conventions" type="button">Convenios</button>
+            <button class="tab" data-tab="tab-users" type="button">Usuarios</button>
+          </div>
+
+          <div id="readonlyNotice" class="notice hidden">Tu rol de empleado permite revisar informacion, pero no gestionar la pagina.</div>
+
+          <section id="tab-orders" class="tab-panel active"></section>
+          <section id="tab-content" class="tab-panel"></section>
+          <section id="tab-conventions" class="tab-panel"></section>
+          <section id="tab-users" class="tab-panel"></section>
+        </div>
+      </section>
+    </main>
+
+    <script src="panel.js?v=20260920-4"></script>
+  </body>
+</html>
