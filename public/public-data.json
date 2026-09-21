@@ -1,0 +1,274 @@
+{
+  "business": {
+    "name": "Pacific Bluffs",
+    "tagline": "Cocina fresca, pedidos al momento y convenios para negocios de Los Santos.",
+    "menuImage": "",
+    "updatedAt": "2026-09-20T01:21:52.116Z"
+  },
+  "announcements": [
+    {
+      "id": "bb6ff315-7468-4bf3-b970-40984b517d2b",
+      "title": "Apertura de temporada",
+      "text": "Pacific Bluffs abre con terraza, cocteles sin alcohol y servicio de pedidos para negocios.",
+      "visible": true,
+      "createdAt": "2026-09-20T01:21:52.131Z"
+    },
+    {
+      "id": "6ad2ad16-b100-4b21-a4bf-81369e687cdf",
+      "title": "Pedidos para empresas",
+      "text": "Los negocios aliados pueden hacer encargos y revisar el estado desde esta web.",
+      "visible": true,
+      "createdAt": "2026-09-20T01:21:52.131Z"
+    }
+  ],
+  "menuItems": [
+    {
+      "id": "pb-menu-001",
+      "name": "Aros de cebolla",
+      "category": "Salado",
+      "price": 14,
+      "description": "Aros de cebolla crujientes y dorados, perfectos para picar.",
+      "available": true
+    },
+    {
+      "id": "pb-menu-002",
+      "name": "Ensalada caprese",
+      "category": "Salado",
+      "price": 16,
+      "description": "Tomate fresco, mozzarella y albahaca, alinados con aceite de oliva.",
+      "available": true
+    },
+    {
+      "id": "pb-menu-003",
+      "name": "Ensalada de gambas al coco",
+      "category": "Salado",
+      "price": 20,
+      "description": "Gambas al coco, frescas y sabrosas, con un toque tropical.",
+      "available": true
+    },
+    {
+      "id": "pb-menu-004",
+      "name": "Focaccia",
+      "category": "Salado",
+      "price": 15,
+      "description": "Pan italiano esponjoso, horneado con aceite de oliva y hierbas aromaticas.",
+      "available": true
+    },
+    {
+      "id": "pb-menu-005",
+      "name": "Sandwich de jamon queso",
+      "category": "Salado",
+      "price": 320,
+      "description": "Pan tostado con jamon y queso fundido, sencillo y delicioso.",
+      "available": true
+    },
+    {
+      "id": "pb-menu-006",
+      "name": "Tostada de aguacate",
+      "category": "Salado",
+      "price": 14,
+      "description": "Pan tostado con jamon y queso fundido, sencillo y delicioso.",
+      "available": true
+    },
+    {
+      "id": "pb-menu-007",
+      "name": "Bunuelos",
+      "category": "Dulce",
+      "price": 14,
+      "description": "Bunuelos caseros, dorados por fuera y tiernos por dentro, con un toque dulce.",
+      "available": true
+    },
+    {
+      "id": "pb-menu-008",
+      "name": "Helado de frutas",
+      "category": "Dulce",
+      "price": 13,
+      "description": "Helado cremoso de frutas variadas, dulce y refrescante.",
+      "available": true
+    },
+    {
+      "id": "pb-menu-009",
+      "name": "Macedonia de frutas",
+      "category": "Dulce",
+      "price": 13,
+      "description": "Frutas frescas variadas, jugosas y llenas de sabor.",
+      "available": true
+    },
+    {
+      "id": "pb-menu-010",
+      "name": "Agua",
+      "category": "Bebidas sin alcohol",
+      "price": 15,
+      "description": "Agua fresca.",
+      "available": true
+    },
+    {
+      "id": "pb-menu-011",
+      "name": "Blue Balls",
+      "category": "Bebidas sin alcohol",
+      "price": 17,
+      "description": "Bebida refrescante sin alcohol.",
+      "available": true
+    },
+    {
+      "id": "pb-menu-012",
+      "name": "Cherry Popper",
+      "category": "Bebidas sin alcohol",
+      "price": 17,
+      "description": "Bebida dulce y refrescante sin alcohol.",
+      "available": true
+    },
+    {
+      "id": "pb-menu-013",
+      "name": "Crotch Rocket",
+      "category": "Bebidas sin alcohol",
+      "price": 17,
+      "description": "Bebida fria sin alcohol.",
+      "available": true
+    },
+    {
+      "id": "pb-menu-014",
+      "name": "Crush limon/naranja",
+      "category": "Bebidas sin alcohol",
+      "price": 14,
+      "description": "Refresco de limon o naranja.",
+      "available": true
+    },
+    {
+      "id": "pb-menu-015",
+      "name": "eCola",
+      "category": "Bebidas sin alcohol",
+      "price": 14,
+      "description": "Refresco de cola.",
+      "available": true
+    },
+    {
+      "id": "pb-menu-016",
+      "name": "Zumo de naranja",
+      "category": "Bebidas sin alcohol",
+      "price": 16,
+      "description": "Zumo de naranja fresco.",
+      "available": true
+    },
+    {
+      "id": "pb-menu-017",
+      "name": "Gintonic",
+      "category": "Cocktails & Alcohol",
+      "price": 22,
+      "description": "Ginebra y tonica, con un toque citrico y refrescante.",
+      "available": true
+    },
+    {
+      "id": "pb-menu-018",
+      "name": "Campari",
+      "category": "Cocktails & Alcohol",
+      "price": 22,
+      "description": "Licor italiano de sabor amargo y notas citricas.",
+      "available": true
+    },
+    {
+      "id": "pb-menu-019",
+      "name": "Cerveza",
+      "category": "Cocktails & Alcohol",
+      "price": 17,
+      "description": "Cerveza refrescante, de sabor suave y ligeramente amargo.",
+      "available": true
+    },
+    {
+      "id": "pb-menu-020",
+      "name": "Champagne",
+      "category": "Cocktails & Alcohol",
+      "price": 21,
+      "description": "Vino espumoso de burbujas finas, fresco y elegante.",
+      "available": true
+    },
+    {
+      "id": "pb-menu-021",
+      "name": "Fuego de Jalisco",
+      "category": "Cocktails & Alcohol",
+      "price": 21,
+      "description": "Tequila, citricos y un toque picante.",
+      "available": true
+    },
+    {
+      "id": "pb-menu-022",
+      "name": "Long Island",
+      "category": "Cocktails & Alcohol",
+      "price": 24,
+      "description": "Coctel intenso con vodka, ron, ginebra, tequila, triple sec, limon y cola.",
+      "available": true
+    },
+    {
+      "id": "pb-menu-023",
+      "name": "Margarita Azteca",
+      "category": "Cocktails & Alcohol",
+      "price": 21,
+      "description": "Coctel vibrante elaborado con tequila, licor de naranja y zumo de lima.",
+      "available": true
+    },
+    {
+      "id": "pb-menu-024",
+      "name": "Mimosa",
+      "category": "Cocktails & Alcohol",
+      "price": 23,
+      "description": "Cava y zumo de naranja, fresco y afrutado.",
+      "available": true
+    },
+    {
+      "id": "pb-menu-025",
+      "name": "Mojito",
+      "category": "Cocktails & Alcohol",
+      "price": 23,
+      "description": "Ron, hierbabuena, lima, azucar y soda, fresco y refrescante.",
+      "available": true
+    },
+    {
+      "id": "pb-menu-026",
+      "name": "Pina colada",
+      "category": "Cocktails & Alcohol",
+      "price": 23,
+      "description": "Ron, crema de coco y zumo de pina, dulce y tropical.",
+      "available": true
+    },
+    {
+      "id": "pb-menu-027",
+      "name": "Sex on the beach",
+      "category": "Cocktails & Alcohol",
+      "price": 23,
+      "description": "Vodka, licor de melocoton, zumo de naranja y arandanos, dulce y afrutado.",
+      "available": true
+    },
+    {
+      "id": "pb-menu-028",
+      "name": "Tequila Sunrise",
+      "category": "Cocktails & Alcohol",
+      "price": 20,
+      "description": "Tequila, zumo de naranja y granadina, dulce, citrico y refrescante.",
+      "available": true
+    },
+    {
+      "id": "pb-menu-029",
+      "name": "Vodka rosa",
+      "category": "Cocktails & Alcohol",
+      "price": 22,
+      "description": "Vodka, licor de frutos rojos y un toque de lima.",
+      "available": true
+    },
+    {
+      "id": "pb-menu-030",
+      "name": "Wet pussy shot",
+      "category": "Cocktails & Alcohol",
+      "price": 19,
+      "description": "Vodka, licor de melocoton, arandanos y un toque de lima.",
+      "available": true
+    },
+    {
+      "id": "pb-menu-031",
+      "name": "Whisky",
+      "category": "Cocktails & Alcohol",
+      "price": 22,
+      "description": "Whisky solo o con hielo.",
+      "available": true
+    }
+  ]
+}
