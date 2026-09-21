@@ -6,7 +6,7 @@ const state = {
 
 const $ = selector => document.querySelector(selector);
 const $$ = selector => Array.from(document.querySelectorAll(selector));
-const API_BASE = location.port === "4321" ? "" : "https://pacificmillers.wasmer.app/";
+const API_BASE = location.port === "4321" ? "" : "https://pacificmillers.wasmer.app";
 let pendingOrderDeleteId = null;
 let pendingUserDeleteId = null;
 let editingUserId = null;
