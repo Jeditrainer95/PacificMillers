@@ -129,20 +129,47 @@ function userStatusLabel(user) {
 }
 
 // ============================================================
-// MENSAJES DE USUARIO (notificaciones en el panel de usuarios)
+// MENSAJES DE USUARIO
 // ============================================================
 
 /**
- * Muestra un mensaje en el panel de usuarios.
+ * Muestra un mensaje en el panel de usuarios (debajo de la cabecera).
  * @param {string} message - Texto a mostrar.
  * @param {string} type - "ok" o "error".
  */
 function showUserMessage(message, type = "ok") {
 	const box = $("#userMessage");
+	if (!box) {
+		// Si no existe el contenedor (por ejemplo, aún no se renderizó),
+		// mostramos un alert como fallback para no perder el feedback.
+		alert(message);
+		return;
+	}
+	box.textContent = message;
+	box.className = `notice user-message ${type === "error" ? "error-text" : ""}`;
+	box.classList.remove("hidden");
+}
+
+/**
+ * Muestra un mensaje DENTRO del modal de usuario.
+ * Sirve para que el usuario vea el error aunque esté dentro del modal.
+ * @param {string} message - Texto a mostrar.
+ * @param {string} type - "ok" o "error".
+ */
+function showUserModalMessage(message, type = "ok") {
+	const box = $("#userModalMessage");
 	if (!box) return;
 	box.textContent = message;
 	box.className = `notice user-message ${type === "error" ? "error-text" : ""}`;
 	box.classList.remove("hidden");
+}
+
+/** Limpia el mensaje interno del modal de usuario. */
+function clearUserModalMessage() {
+	const box = $("#userModalMessage");
+	if (!box) return;
+	box.textContent = "";
+	box.classList.add("hidden");
 }
 
 // ============================================================
@@ -155,7 +182,13 @@ function showUserMessage(message, type = "ok") {
  * @param {string|null} userId - ID del usuario a editar o null para crear.
  */
 function openUserModal(userId = null) {
-	if (!canManageUsers()) return;
+	if (!canManageUsers()) {
+		showUserMessage(
+			"Solo el rol 'jefe' puede gestionar usuarios.",
+			"error",
+		);
+		return;
+	}
 	editingUserId = userId;
 	const modal = $("#userModal");
 	const form = $("#userEditorForm");
@@ -176,6 +209,7 @@ function openUserModal(userId = null) {
 		? "Dejalo vacio para mantener la contrasena actual."
 		: "Minimo 4 caracteres.";
 
+	clearUserModalMessage();
 	modal.classList.remove("hidden");
 	form.username.focus();
 }
@@ -183,6 +217,7 @@ function openUserModal(userId = null) {
 /** Cierra el modal de edición/creación de usuario. */
 function closeUserModal() {
 	editingUserId = null;
+	clearUserModalMessage();
 	$("#userModal")?.classList.add("hidden");
 }
 
@@ -237,7 +272,7 @@ async function api(path, options = {}) {
 	}
 
 	const data = await response.json().catch(() => ({}));
-	if (!response.ok) throw new Error(data.error || "Error de conexion");
+	if (!response.ok) throw new Error(data.error || `Error HTTP ${response.status}`);
 	return data;
 }
 
@@ -653,6 +688,8 @@ function renderUsersTab() {
           <input name="active" type="checkbox" checked>
           Cuenta activa
         </label>
+        <!-- Mensaje interno del modal (para feedback inmediato) -->
+        <div id="userModalMessage" class="notice user-message hidden"></div>
         <div class="modal-actions">
           <button class="button ghost" data-action="close-user-modal" type="button">Cancelar</button>
           <button class="button primary" type="submit">Guardar usuario</button>
@@ -687,29 +724,38 @@ function renderUsersTab() {
 async function handleDashboardSubmit(event) {
 	const form = event.target;
 	if (!form.matches("form")) return;
+
+	// ⚠️ IMPORTANTE: preventDefault SIEMPRE, antes de cualquier return.
+	// Así evitamos que el navegador recargue la página si hay un error.
 	event.preventDefault();
 
 	// ----- FORMULARIO DE USUARIO (crear/editar) -----
 	if (form.id === "userEditorForm") {
-		if (!canManageUsers()) return;
+		if (!canManageUsers()) {
+			showUserModalMessage(
+				"Solo el rol 'jefe' puede gestionar usuarios.",
+				"error",
+			);
+			return;
+		}
 
 		const data = Object.fromEntries(new FormData(form).entries());
 		data.active = form.active.checked;
 
 		// Validaciones básicas
 		if (!data.username || !data.name || !data.role) {
-			showUserMessage("Rellena usuario, nombre y rol.", "error");
+			showUserModalMessage("Rellena usuario, nombre y rol.", "error");
 			return;
 		}
 		if (!editingUserId && !data.password) {
-			showUserMessage(
+			showUserModalMessage(
 				"La contrasena es obligatoria al crear usuarios.",
 				"error",
 			);
 			return;
 		}
 		if (data.password && data.password.length < 4) {
-			showUserMessage(
+			showUserModalMessage(
 				"La contrasena debe tener al menos 4 caracteres.",
 				"error",
 			);
@@ -722,9 +768,25 @@ async function handleDashboardSubmit(event) {
 			: "/api/users";
 		const method = editingUserId ? "PUT" : "POST";
 
+		// Feedback visual: deshabilitamos el botón mientras se envía.
+		const submitBtn = form.querySelector("button[type='submit']");
+		const originalText = submitBtn?.textContent;
+		if (submitBtn) {
+			submitBtn.disabled = true;
+			submitBtn.textContent = "Guardando...";
+		}
+		clearUserModalMessage();
+
 		try {
 			const wasEditing = Boolean(editingUserId);
-			await api(path, { method, body: JSON.stringify(data) });
+			console.log(`[user] ${method} ${path}`, data);
+
+			const response = await api(path, {
+				method,
+				body: JSON.stringify(data),
+			});
+			console.log("[user] respuesta:", response);
+
 			closeUserModal();
 			await refreshDashboard();
 			showUserMessage(
@@ -733,7 +795,14 @@ async function handleDashboardSubmit(event) {
 					: "Usuario creado correctamente.",
 			);
 		} catch (error) {
-			showUserMessage(error.message, "error");
+			console.error("[user] error:", error);
+			showUserModalMessage(error.message, "error");
+		} finally {
+			// Restauramos el botón siempre.
+			if (submitBtn) {
+				submitBtn.disabled = false;
+				submitBtn.textContent = originalText || "Guardar usuario";
+			}
 		}
 		return;
 	}
@@ -755,30 +824,35 @@ async function handleDashboardSubmit(event) {
 		data[input.name] = input.checked;
 	});
 
-	if (form.matches(".orderStatusForm")) {
-		await api("/api/order-status", {
-			method: "POST",
-			body: JSON.stringify({ id: form.dataset.id, ...data }),
-		});
-	} else if (form.id === "businessForm") {
-		await api("/api/business", { method: "PUT", body: JSON.stringify(data) });
-	} else if (form.id === "announcementForm") {
-		await api("/api/announcements", {
-			method: "POST",
-			body: JSON.stringify(data),
-		});
-	} else if (form.id === "menuForm") {
-		await api("/api/menu", { method: "POST", body: JSON.stringify(data) });
-	} else if (form.id === "conventionForm") {
-		await api("/api/conventions", {
-			method: "POST",
-			body: JSON.stringify(data),
-		});
-	} else if (form.id === "invoiceForm") {
-		await api("/api/invoices", { method: "POST", body: JSON.stringify(data) });
-	}
+	try {
+		if (form.matches(".orderStatusForm")) {
+			await api("/api/order-status", {
+				method: "POST",
+				body: JSON.stringify({ id: form.dataset.id, ...data }),
+			});
+		} else if (form.id === "businessForm") {
+			await api("/api/business", { method: "PUT", body: JSON.stringify(data) });
+		} else if (form.id === "announcementForm") {
+			await api("/api/announcements", {
+				method: "POST",
+				body: JSON.stringify(data),
+			});
+		} else if (form.id === "menuForm") {
+			await api("/api/menu", { method: "POST", body: JSON.stringify(data) });
+		} else if (form.id === "conventionForm") {
+			await api("/api/conventions", {
+				method: "POST",
+				body: JSON.stringify(data),
+			});
+		} else if (form.id === "invoiceForm") {
+			await api("/api/invoices", { method: "POST", body: JSON.stringify(data) });
+		}
 
-	await refreshDashboard();
+		await refreshDashboard();
+	} catch (error) {
+		console.error("[form] error:", error);
+		alert(error.message);
+	}
 }
 
 // ============================================================
@@ -937,6 +1011,7 @@ function bindEvents() {
 	});
 
 	// ----- DELEGACIÓN DE EVENTOS EN EL DASHBOARD -----
+	// Un solo listener para submit y otro para click.
 	$("#dashboard").addEventListener("submit", handleDashboardSubmit);
 	$("#dashboard").addEventListener("click", handleDashboardClick);
 }
