@@ -546,7 +546,7 @@ function renderUsersTab() {
     <div id="userModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="userModalTitle">
       <form id="userEditorForm" class="modal-panel user-editor-form">
         <h3 id="userModalTitle">Crear usuario</h3>
-        <input name="id" type="hidden">
+        <input name="userId" type="hidden">
         <label>Nombre de usuario
           <input name="username" required>
         </label>
