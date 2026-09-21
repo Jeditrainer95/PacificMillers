@@ -1,21 +1,50 @@
+// ============================================================
+// ESTADO GLOBAL DE LA APLICACIÓN
+// ============================================================
+// Guarda el token JWT, el usuario logueado y los datos del dashboard.
+// El token se persiste en localStorage para mantener la sesión.
 const state = {
 	token: localStorage.getItem("pb_token") || "",
 	user: null,
 	dashboard: null,
 };
 
+// ============================================================
+// HELPERS DE DOM
+// ============================================================
+// $  -> devuelve el primer elemento que coincide con el selector.
 const $ = (selector) => document.querySelector(selector);
+// $$ -> devuelve un array con todos los elementos que coinciden.
 const $$ = (selector) => Array.from(document.querySelectorAll(selector));
+
+// URL base de la API. En desarrollo (puerto 4321) usa la misma web,
+// en producción apunta al backend desplegado en Wasmer.
 const API_BASE =
 	location.port === "4321" ? "" : "https://pacificmillers.wasmer.app";
+
+// Variables para controlar modales y edición de usuarios.
 let pendingOrderDeleteId = null;
 let pendingUserDeleteId = null;
 let editingUserId = null;
 
+// ============================================================
+// FUNCIONES DE FORMATO
+// ============================================================
+
+/**
+ * Formatea un número como moneda en euros (sin decimales).
+ * @param {number|string} value - Valor a formatear.
+ * @returns {string} Ej: "$1.250"
+ */
 function money(value) {
 	return `$${Number(value || 0).toLocaleString("es-ES", { maximumFractionDigits: 0 })}`;
 }
 
+/**
+ * Traduce el estado interno de un pedido a una etiqueta legible.
+ * @param {string} status - Estado interno (recibido, preparando, ...).
+ * @returns {string} Etiqueta en español.
+ */
 function statusLabel(status) {
 	return (
 		{
@@ -28,6 +57,11 @@ function statusLabel(status) {
 	);
 }
 
+/**
+ * Formatea una fecha ISO a formato local español.
+ * @param {string} value - Fecha en formato ISO.
+ * @returns {string} Fecha legible o "Sin fecha".
+ */
 function formatDate(value) {
 	if (!value) return "Sin fecha";
 	return new Date(value).toLocaleString("es-ES", {
@@ -39,11 +73,25 @@ function formatDate(value) {
 	});
 }
 
+/**
+ * Extrae el total estimado desde el campo "details" de un pedido.
+ * Busca el patrón "Total estimado: $123" o similar.
+ * @param {string} details - Texto con los detalles del pedido.
+ * @returns {string} Importe formateado o "Sin importe".
+ */
 function extractOrderTotal(details) {
 	const match = String(details || "").match(/Total estimado:\s*\$?([\d.,]+)/i);
 	return match ? `$${match[1]}` : "Sin importe";
 }
 
+// ============================================================
+// MODALES DE ELIMINACIÓN DE PEDIDOS
+// ============================================================
+
+/**
+ * Muestra el modal de confirmación para eliminar un pedido.
+ * @param {string} orderId - ID del pedido a eliminar.
+ */
 function showOrderDeleteModal(orderId) {
 	pendingOrderDeleteId = orderId;
 	const modal = $("#orderDeleteModal");
@@ -52,19 +100,43 @@ function showOrderDeleteModal(orderId) {
 	modal.querySelector("[data-action='cancel-order-delete']").focus();
 }
 
+/** Oculta el modal de eliminación de pedidos y resetea el ID pendiente. */
 function hideOrderDeleteModal() {
 	pendingOrderDeleteId = null;
 	$("#orderDeleteModal")?.classList.add("hidden");
 }
 
+// ============================================================
+// PERMISOS Y ROLES
+// ============================================================
+
+/**
+ * Indica si el usuario actual puede gestionar usuarios.
+ * Solo el rol "jefe" tiene permiso.
+ * @returns {boolean}
+ */
 function canManageUsers() {
 	return state.user?.role === "jefe";
 }
 
+/**
+ * Devuelve la etiqueta de estado de un usuario (Activo/Inactivo).
+ * @param {object} user - Objeto usuario.
+ * @returns {string}
+ */
 function userStatusLabel(user) {
 	return user.active === false ? "Inactivo" : "Activo";
 }
 
+// ============================================================
+// MENSAJES DE USUARIO (notificaciones en el panel de usuarios)
+// ============================================================
+
+/**
+ * Muestra un mensaje en el panel de usuarios.
+ * @param {string} message - Texto a mostrar.
+ * @param {string} type - "ok" o "error".
+ */
 function showUserMessage(message, type = "ok") {
 	const box = $("#userMessage");
 	if (!box) return;
@@ -73,12 +145,22 @@ function showUserMessage(message, type = "ok") {
 	box.classList.remove("hidden");
 }
 
+// ============================================================
+// CRUD DE USUARIOS - MODAL DE CREAR/EDITAR
+// ============================================================
+
+/**
+ * Abre el modal de usuario para crear (userId=null) o editar.
+ * Rellena el formulario con los datos del usuario si se está editando.
+ * @param {string|null} userId - ID del usuario a editar o null para crear.
+ */
 function openUserModal(userId = null) {
 	if (!canManageUsers()) return;
 	editingUserId = userId;
 	const modal = $("#userModal");
 	const form = $("#userEditorForm");
 	const user = state.dashboard.users.find((item) => item.id === userId);
+
 	form.reset();
 	form.id.value = user?.id || "";
 	form.username.value = user?.username || "";
@@ -86,20 +168,32 @@ function openUserModal(userId = null) {
 	form.email.value = user?.email || "";
 	form.role.value = user?.role || "empleado";
 	form.active.checked = user ? user.active !== false : true;
+	// La contraseña solo es obligatoria al crear.
 	form.password.required = !user;
+
 	$("#userModalTitle").textContent = user ? "Editar usuario" : "Crear usuario";
 	$("#passwordHelp").textContent = user
 		? "Dejalo vacio para mantener la contrasena actual."
 		: "Minimo 4 caracteres.";
+
 	modal.classList.remove("hidden");
 	form.username.focus();
 }
 
+/** Cierra el modal de edición/creación de usuario. */
 function closeUserModal() {
 	editingUserId = null;
 	$("#userModal")?.classList.add("hidden");
 }
 
+// ============================================================
+// CRUD DE USUARIOS - MODAL DE ELIMINACIÓN
+// ============================================================
+
+/**
+ * Abre el modal de confirmación para eliminar un usuario.
+ * @param {string} userId - ID del usuario a eliminar.
+ */
 function openUserDeleteModal(userId) {
 	if (!canManageUsers()) return;
 	pendingUserDeleteId = userId;
@@ -109,17 +203,30 @@ function openUserDeleteModal(userId) {
 		?.focus();
 }
 
+/** Cierra el modal de eliminación de usuario y resetea el ID pendiente. */
 function closeUserDeleteModal() {
 	pendingUserDeleteId = null;
 	$("#userDeleteModal")?.classList.add("hidden");
 }
 
+// ============================================================
+// LLAMADAS A LA API
+// ============================================================
+
+/**
+ * Realiza una petición fetch a la API.
+ * Añade automáticamente el token JWT si existe.
+ * @param {string} path - Ruta relativa (ej: "/api/users").
+ * @param {object} options - Opciones de fetch (method, body, headers...).
+ * @returns {Promise<object>} Datos JSON de la respuesta.
+ */
 async function api(path, options = {}) {
 	const headers = {
 		"Content-Type": "application/json",
 		...(options.headers || {}),
 	};
 	if (state.token) headers.Authorization = `Bearer ${state.token}`;
+
 	let response;
 	try {
 		response = await fetch(`${API_BASE}${path}`, { ...options, headers });
@@ -128,11 +235,21 @@ async function api(path, options = {}) {
 			`No se puede conectar con la API en ${API_BASE || "esta web"}. Arranca node server.js y recarga.`,
 		);
 	}
+
 	const data = await response.json().catch(() => ({}));
 	if (!response.ok) throw new Error(data.error || "Error de conexion");
 	return data;
 }
 
+// ============================================================
+// SEGURIDAD - ESCAPE DE HTML
+// ============================================================
+
+/**
+ * Escapa caracteres especiales HTML para prevenir XSS.
+ * @param {*} value - Valor a escapar.
+ * @returns {string} Valor seguro para insertar en HTML.
+ */
 function escapeHtml(value) {
 	return String(value ?? "")
 		.replaceAll("&", "&amp;")
@@ -142,31 +259,60 @@ function escapeHtml(value) {
 		.replaceAll("'", "&#039;");
 }
 
+// ============================================================
+// REFRESCO DEL DASHBOARD
+// ============================================================
+
+/**
+ * Carga los datos del dashboard desde la API y actualiza el estado.
+ * Si no hay token, no hace nada.
+ */
 async function refreshDashboard() {
 	if (!state.token) return;
 	const response = await api("/api/dashboard");
 	state.user = response.user;
 	state.dashboard = response.data;
+
+	// Muestra el dashboard y oculta el login.
 	$("#loginPanel").classList.add("hidden");
 	$("#dashboard").classList.remove("hidden");
 	$("#sessionName").textContent = state.user.name;
 	$("#sessionRole").textContent = `Rol: ${state.user.role}`;
+	// Aviso de solo lectura si el usuario no puede gestionar nada.
 	$("#readonlyNotice").classList.toggle("hidden", canManageAny());
 	renderDashboard();
 }
 
+/**
+ * Indica si el usuario puede gestionar contenido (jefe o encargado).
+ * @returns {boolean}
+ */
 function canManageAny() {
 	return state.user && ["jefe", "encargado"].includes(state.user.role);
 }
 
+/**
+ * Indica si el usuario puede gestionar convenios (jefe o encargado).
+ * @returns {boolean}
+ */
 function canManageConventions() {
 	return state.user && ["jefe", "encargado"].includes(state.user.role);
 }
 
+/**
+ * Devuelve el atributo "disabled" si el usuario no tiene permiso.
+ * @param {boolean} allowed - Si el usuario tiene permiso.
+ * @returns {string} "" o "disabled".
+ */
 function disabledAttr(allowed = canManageAny()) {
 	return allowed ? "" : "disabled";
 }
 
+// ============================================================
+// RENDERIZADO PRINCIPAL
+// ============================================================
+
+/** Renderiza todas las pestañas del dashboard. */
 function renderDashboard() {
 	renderOrdersTab();
 	renderContentTab();
@@ -174,8 +320,15 @@ function renderDashboard() {
 	renderUsersTab();
 }
 
+// ============================================================
+// PESTAÑA DE PEDIDOS
+// ============================================================
+
+/** Renderiza la lista de pedidos con opciones de actualizar y eliminar. */
 function renderOrdersTab() {
 	const orders = state.dashboard.orders;
+
+	// Si no hay pedidos, muestra estado vacío.
 	if (!orders.length) {
 		$("#tab-orders").innerHTML = `
       <div class="empty-state panel">
@@ -246,6 +399,11 @@ function renderOrdersTab() {
   `;
 }
 
+// ============================================================
+// PESTAÑA DE CONTENIDO (negocio, anuncios, carta)
+// ============================================================
+
+/** Renderiza los formularios de negocio, anuncios y carta, más las listas actuales. */
 function renderContentTab() {
 	const business = state.dashboard.business;
 	$("#tab-content").innerHTML = `
@@ -310,6 +468,15 @@ function renderContentTab() {
   `;
 }
 
+/**
+ * Genera una fila (card) con título, texto y botón de eliminar.
+ * @param {string} title - Título de la card.
+ * @param {string} text - Texto descriptivo.
+ * @param {string} type - Tipo de recurso (announcement, menu, conventions).
+ * @param {string} id - ID del recurso.
+ * @param {boolean} allowed - Si el usuario puede eliminar.
+ * @returns {string} HTML de la card.
+ */
 function adminRow(title, text, type, id, allowed = canManageAny()) {
 	return `
     <article class="card">
@@ -322,6 +489,11 @@ function adminRow(title, text, type, id, allowed = canManageAny()) {
   `;
 }
 
+// ============================================================
+// PESTAÑA DE CONVENIOS Y FACTURAS
+// ============================================================
+
+/** Renderiza los formularios de convenios/facturas y sus listas. */
 function renderConventionsTab() {
 	const canEdit = canManageConventions();
 	$("#tab-conventions").innerHTML = `
@@ -388,10 +560,20 @@ function renderConventionsTab() {
   `;
 }
 
+// ============================================================
+// PESTAÑA DE USUARIOS (CRUD COMPLETO)
+// ============================================================
+
+/**
+ * Renderiza la tabla de usuarios con acciones de editar/eliminar,
+ * y los modales de creación/edición y confirmación de borrado.
+ */
 function renderUsersTab() {
 	const users = state.dashboard.users;
 	const canEdit = canManageUsers();
+
 	$("#tab-users").innerHTML = `
+    <!-- Cabecera con botón de crear usuario -->
     <div class="users-header panel">
       <div>
         <h3>Usuarios</h3>
@@ -399,7 +581,11 @@ function renderUsersTab() {
       </div>
       <button class="button primary" ${canEdit ? "" : "disabled"} data-action="open-user-create" type="button">+ Crear usuario</button>
     </div>
+
+    <!-- Contenedor de mensajes (éxito/error) -->
     <div id="userMessage" class="notice user-message hidden"></div>
+
+    <!-- Tabla de usuarios -->
     <div class="panel users-table-wrap">
       <table class="users-table">
         <thead>
@@ -424,7 +610,9 @@ function renderUsersTab() {
               <td>${userStatusLabel(user)}</td>
               <td>
                 <div class="table-actions">
+                  <!-- Botón editar: siempre que el usuario pueda gestionar -->
                   <button class="button ghost userEditButton" ${canEdit ? "" : "disabled"} data-id="${user.id}" type="button">Editar</button>
+                  <!-- Botón eliminar: no permitido sobre uno mismo -->
                   <button class="button danger userDeleteButton" ${canEdit && user.id !== state.user.id ? "" : "disabled"} data-id="${user.id}" type="button">Eliminar</button>
                 </div>
               </td>
@@ -435,6 +623,8 @@ function renderUsersTab() {
         </tbody>
       </table>
     </div>
+
+    <!-- Modal de crear/editar usuario -->
     <div id="userModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="userModalTitle">
       <form id="userEditorForm" class="modal-panel user-editor-form">
         <h3 id="userModalTitle">Crear usuario</h3>
@@ -469,6 +659,8 @@ function renderUsersTab() {
         </div>
       </form>
     </div>
+
+    <!-- Modal de confirmación de borrado -->
     <div id="userDeleteModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="userDeleteTitle">
       <div class="modal-panel">
         <h3 id="userDeleteTitle">Eliminar usuario</h3>
@@ -483,15 +675,28 @@ function renderUsersTab() {
   `;
 }
 
+// ============================================================
+// MANEJO DE ENVÍOS DE FORMULARIOS
+// ============================================================
+
+/**
+ * Maneja el submit de cualquier formulario dentro del dashboard.
+ * Distingue entre formularios de usuario, convenio, factura, etc.
+ * @param {Event} event - Evento submit.
+ */
 async function handleDashboardSubmit(event) {
 	const form = event.target;
 	if (!form.matches("form")) return;
 	event.preventDefault();
 
+	// ----- FORMULARIO DE USUARIO (crear/editar) -----
 	if (form.id === "userEditorForm") {
 		if (!canManageUsers()) return;
+
 		const data = Object.fromEntries(new FormData(form).entries());
 		data.active = form.active.checked;
+
+		// Validaciones básicas
 		if (!data.username || !data.name || !data.role) {
 			showUserMessage("Rellena usuario, nombre y rol.", "error");
 			return;
@@ -510,10 +715,13 @@ async function handleDashboardSubmit(event) {
 			);
 			return;
 		}
+
+		// Si estamos editando -> PUT, si no -> POST
 		const path = editingUserId
 			? `/api/users/${encodeURIComponent(editingUserId)}`
 			: "/api/users";
 		const method = editingUserId ? "PUT" : "POST";
+
 		try {
 			const wasEditing = Boolean(editingUserId);
 			await api(path, { method, body: JSON.stringify(data) });
@@ -530,15 +738,19 @@ async function handleDashboardSubmit(event) {
 		return;
 	}
 
+	// ----- RESTO DE FORMULARIOS -----
+	// Convenios y facturas solo para jefe/encargado.
 	if (
 		(form.id === "conventionForm" || form.id === "invoiceForm") &&
 		!canManageConventions()
 	)
 		return;
+	// El resto de formularios requieren permisos de gestión general.
 	if (!["conventionForm", "invoiceForm"].includes(form.id) && !canManageAny())
 		return;
 
 	const data = Object.fromEntries(new FormData(form).entries());
+	// Convierte checkboxes a booleanos.
 	form.querySelectorAll("input[type='checkbox']").forEach((input) => {
 		data[input.name] = input.checked;
 	});
@@ -569,7 +781,20 @@ async function handleDashboardSubmit(event) {
 	await refreshDashboard();
 }
 
+// ============================================================
+// MANEJO DE CLICS (tabs, modales, botones CRUD)
+// ============================================================
+
+/**
+ * Maneja todos los clics dentro del dashboard:
+ * - Cambio de pestañas.
+ * - Apertura/cierre de modales.
+ * - Eliminación de pedidos, usuarios, anuncios, menú, convenios.
+ * - Edición de usuarios.
+ * @param {Event} event - Evento click.
+ */
 async function handleDashboardClick(event) {
+	// ----- CAMBIO DE PESTAÑA -----
 	const tab = event.target.closest(".tab");
 	if (tab) {
 		$$(".tab").forEach((item) => item.classList.toggle("active", item === tab));
@@ -579,6 +804,7 @@ async function handleDashboardClick(event) {
 		return;
 	}
 
+	// ----- ELIMINAR PEDIDO -----
 	const orderDeleteButton = event.target.closest(".orderDeleteButton");
 	if (orderDeleteButton) {
 		if (!canManageAny()) return;
@@ -586,7 +812,9 @@ async function handleDashboardClick(event) {
 		return;
 	}
 
+	// ----- ACCIONES DE MODALES (data-action) -----
 	const modalAction = event.target.closest("[data-action]");
+
 	if (modalAction?.dataset.action === "cancel-order-delete") {
 		hideOrderDeleteModal();
 		return;
@@ -602,21 +830,25 @@ async function handleDashboardClick(event) {
 		return;
 	}
 
+	// ----- CRUD USUARIOS: ABRIR MODAL DE CREAR -----
 	if (modalAction?.dataset.action === "open-user-create") {
 		openUserModal();
 		return;
 	}
 
+	// ----- CRUD USUARIOS: CERRAR MODAL DE EDITAR -----
 	if (modalAction?.dataset.action === "close-user-modal") {
 		closeUserModal();
 		return;
 	}
 
+	// ----- CRUD USUARIOS: CANCELAR ELIMINACIÓN -----
 	if (modalAction?.dataset.action === "cancel-user-delete") {
 		closeUserDeleteModal();
 		return;
 	}
 
+	// ----- CRUD USUARIOS: CONFIRMAR ELIMINACIÓN -----
 	if (modalAction?.dataset.action === "confirm-user-delete") {
 		if (!pendingUserDeleteId) return;
 		try {
@@ -633,23 +865,27 @@ async function handleDashboardClick(event) {
 		return;
 	}
 
+	// ----- CRUD USUARIOS: BOTÓN EDITAR -----
 	const userEditButton = event.target.closest(".userEditButton");
 	if (userEditButton) {
 		openUserModal(userEditButton.dataset.id);
 		return;
 	}
 
+	// ----- CRUD USUARIOS: BOTÓN ELIMINAR -----
 	const userDeleteButton = event.target.closest(".userDeleteButton");
 	if (userDeleteButton) {
 		openUserDeleteModal(userDeleteButton.dataset.id);
 		return;
 	}
 
+	// ----- ELIMINAR ANUNCIOS / MENÚ / CONVENIOS -----
 	const deleteButton = event.target.closest(".deleteButton");
 	if (!deleteButton) return;
 	const type = deleteButton.dataset.type;
 	if (type === "conventions" && !canManageConventions()) return;
 	if (type !== "conventions" && !canManageAny()) return;
+
 	const id = deleteButton.dataset.id;
 	const path =
 		type === "announcement"
@@ -657,11 +893,18 @@ async function handleDashboardClick(event) {
 			: type === "menu"
 				? `/api/menu/${id}`
 				: `/api/conventions/${id}`;
+
 	await api(path, { method: "DELETE" });
 	await refreshDashboard();
 }
 
+// ============================================================
+// EVENTOS GLOBALES (login, logout, dashboard)
+// ============================================================
+
+/** Vincula los eventos de login, logout y delegación en el dashboard. */
 function bindEvents() {
+	// ----- LOGIN -----
 	$("#loginForm").addEventListener("submit", async (event) => {
 		event.preventDefault();
 		$("#loginError").textContent = "";
@@ -682,6 +925,7 @@ function bindEvents() {
 		}
 	});
 
+	// ----- LOGOUT -----
 	$("#logoutButton").addEventListener("click", async () => {
 		await api("/api/logout", { method: "POST" }).catch(() => {});
 		localStorage.removeItem("pb_token");
@@ -692,20 +936,33 @@ function bindEvents() {
 		$("#loginPanel").classList.remove("hidden");
 	});
 
+	// ----- DELEGACIÓN DE EVENTOS EN EL DASHBOARD -----
 	$("#dashboard").addEventListener("submit", handleDashboardSubmit);
 	$("#dashboard").addEventListener("click", handleDashboardClick);
 }
 
+// ============================================================
+// INICIALIZACIÓN DE LA APLICACIÓN
+// ============================================================
+
+/**
+ * Punto de entrada:
+ * - Vincula los eventos globales.
+ * - Si hay token guardado, intenta refrescar el dashboard.
+ * - Si el token es inválido, lo elimina y vuelve al login.
+ */
 async function init() {
 	bindEvents();
 	if (state.token) {
 		refreshDashboard().catch(() => {
+			// Token inválido o expirado: limpiamos sesión.
 			localStorage.removeItem("pb_token");
 			state.token = "";
 		});
 	}
 }
 
+// Ejecuta la inicialización y, si falla, muestra el error en pantalla.
 init().catch((error) => {
 	document.body.insertAdjacentHTML(
 		"afterbegin",
