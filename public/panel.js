@@ -143,7 +143,7 @@ function openUserModal(userId = null) {
 		const user = state.dashboard.users.find((item) => item.id === userId);
 
 		form.reset();
-		form.id.value = user?.id || "";
+		form.userId.value = user?.id || "";
 		form.username.value = user?.username || "";
 		form.name.value = user?.name || "";
 		form.email.value = user?.email || "";
